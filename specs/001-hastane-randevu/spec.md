@@ -135,14 +135,14 @@ listelendiği doğrulanabilir.
 
 - **FR-011**: Sistem, bir hastanın seçtiği doktor, tarih ve boş slot için AKTIF durumda bir
   randevu oluşturmasını sağlamalıdır.
-- **FR-012**: Sistem, bir hastanın aynı gün ve aynı saat dilimi için birden fazla AKTIF
-  randevu almasını engellemelidir.
+- **FR-012**: Sistem, bir hastanın aynı gün için birden fazla AKTIF randevu almasını
+  engellemelidir (bir hasta bir günde en fazla bir aktif randevuya sahip olabilir).
 - **FR-013**: Sistem, bir doktorun aynı gün ve aynı saat diliminde birden fazla hastaya
   (birden fazla AKTIF randevu) atanmasını engellemelidir.
 - **FR-014**: Sistem, geçmiş bir tarihe veya bugüne ait geçmiş bir saat dilimine randevu
   oluşturulmasını engellemelidir.
-- **FR-015**: Sistem, bir hastanın yalnızca kendi AKTIF randevusunu iptal etmesine izin
-  vermeli; iptalde randevu durumunu IPTAL yapmalıdır.
+- **FR-015**: Sistem, bir randevunun yalnızca sahibi hasta veya bir ADMIN tarafından iptal
+  edilmesine izin vermeli; iptalde randevu durumu IPTAL yapılmalı ve satır silinmemelidir.
 - **FR-016**: İptal edilen bir randevunun zaman dilimi, aynı doktor-tarih için diğer hastalara
   anında yeniden boş slot olarak sunulmalıdır.
 
@@ -157,7 +157,28 @@ listelendiği doğrulanabilir.
 
 - **FR-019**: Sistem, iş kuralı ihlallerini (dolu slot, çift randevu, geçmiş tarih, yetkisiz
   erişim) anlaşılır ve tutarlı hata bildirimleriyle kullanıcıya iletmelidir; ham sistem/iç
-  hata detayları kullanıcıya sızdırılmamalıdır.
+  hata detayları kullanıcıya sızdırılmamalıdır. Tüm API yanıtları `{ success, message, data }`
+  (hata: `{ success, message }`) biçiminde standarttır.
+
+**Yönetici İşlemleri (Admin — yönetici talebi)**
+
+- **FR-020**: Sistem, yeni bölüm ve doktor oluşturma işlemlerine yalnızca ADMIN rolündeki
+  kullanıcıların erişmesine izin vermeli; kimliği doğrulanmamış veya ADMIN olmayan istekler
+  reddedilmelidir.
+
+**Hizmet Değerlendirmesi (Review — yönetici talebi)**
+
+- **FR-021**: Sistem, bir hastanın yalnızca kendisine ait, tarihi geçmiş (gerçekleşmiş) ve
+  iptal edilmemiş (AKTIF) bir randevu için 1–5 arası bir puan (rating) ve yorum (comment)
+  içeren bir değerlendirme bırakmasına izin vermelidir. Her randevu için en fazla bir
+  değerlendirme yapılabilir (appointmentId benzersiz).
+
+**E-posta Bildirimi (yönetici talebi)**
+
+- **FR-022**: Sistem, bir randevu oluşturulduğunda ve iptal edildiğinde hastaya bilgilendirme
+  e-postası göndermelidir. E-posta gönterim hatası ana işlemi (randevu oluşturma/iptal)
+  başarısız kılmamalıdır (best-effort). Not: hatırlatma e-postaları (zamanlanmış görev) bu
+  sürümde kapsam dışıdır.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -170,6 +191,9 @@ listelendiği doğrulanabilir.
 - **Appointment (Randevu)**: Bir hasta ile bir doktor arasındaki, belirli bir tarih ve 30
   dakikalık zaman dilimi için planlanmış görüşme. Nitelikler: hasta (User/HASTA), doktor,
   tarih, zaman dilimi (timeSlot), durum (AKTIF/IPTAL), oluşturulma zamanı.
+- **Review (Değerlendirme)**: Gerçekleşmiş bir randevu için hastanın doktora bıraktığı
+  değerlendirme. Bir randevuya birebir bağlıdır (appointmentId benzersiz). Nitelikler: hasta,
+  doktor, puan (rating 1–5), yorum (comment), oluşturulma zamanı.
 
 ## Success Criteria *(mandatory)*
 
@@ -185,7 +209,10 @@ listelendiği doğrulanabilir.
   slot olarak listelenir.
 - **SC-005**: Geçmiş tarih/saat için yapılan randevu talepleri %100 oranında reddedilir.
 - **SC-006**: Bir kullanıcı yalnızca kendi verilerine erişebilir; başka bir kullanıcının
-  randevusunu görüntüleme/iptal girişimlerinin tamamı reddedilir.
+  randevusunu görüntüleme/iptal girişimlerinin tamamı reddedilir (ADMIN iptal istisnadır).
+- **SC-007**: ADMIN olmayan hiçbir istek bölüm/doktor oluşturamaz (%100 reddedilir).
+- **SC-008**: Bir hasta yalnızca kendisine ait, geçmiş ve AKTIF bir randevu için, randevu
+  başına en fazla bir kez 1–5 arası değerlendirme bırakabilir.
 
 ## Assumptions
 
@@ -194,13 +221,18 @@ listelendiği doğrulanabilir.
 - Mesai penceresi tüm doktorlar için sabit 09:00–17:00'dir; doktora özel çalışma saatleri,
   izin/tatil günleri ve mola tanımları bu sürümde kapsam dışıdır.
 - Randevu süresi sabit 30 dakikadır ve slotlar tüm bölümler için aynıdır.
-- ADMIN rolü veri modelinde tanımlıdır ancak bu sürümde ayrı bir yönetim paneli/CRUD ekranı
-  sağlanmaz; başlangıç verisi (bölümler, doktorlar) hazır tohum (seed) verisiyle yüklenir.
+- ADMIN rolü bölüm ve doktor oluşturma API uçlarına erişebilir (yönetici talebi); ayrı bir
+  yönetim paneli UI ekranı bu sürümde kapsam dışıdır. Başlangıç verisi (bölümler, doktorlar)
+  ayrıca hazır tohum (seed) verisiyle de yüklenir.
 - Zaman ve tarih hesapları sunucunun tek bir referans saat dilimine göre yapılır; çoklu saat
   dilimi desteği kapsam dışıdır.
 
 ### Kapsam Dışı (Out of Scope — v1)
 
 Aşağıdaki özellikler "Sadece İsteneni Yap" prensibi gereği bu MVP'de **geliştirilmeyecektir**:
-online ödeme, e-posta/SMS bildirimleri, randevu erteleme/güncelleme, doktorun randevu
-oluşturması/iptali, ADMIN yönetim paneli CRUD ekranları ve raporlama.
+online ödeme, SMS bildirimleri, randevu erteleme/güncelleme, doktorun randevu
+oluşturması/iptali, ADMIN yönetim paneli **UI** ekranları, raporlama ve zamanlanmış
+hatırlatma e-postaları (cron).
+
+**Kapsama alındı (yönetici talebi — 2026-07-13):** ADMIN'in bölüm/doktor oluşturması (API),
+hizmet değerlendirmesi (Review) ve randevu oluşturma/iptalde bilgilendirme e-postası.

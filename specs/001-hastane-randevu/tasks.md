@@ -115,14 +115,16 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Independent Test**: quickstart.md Senaryo 4–6 (çakışma 409, geçmiş 400, iptal→slot boşa çıkar, yalnızca kendi verisi).
 
-- [ ] T021 [US1] Randevu oluşturma fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `create` (POST): slot geçerliliği, geçmiş tarih/saat reddi (FR-014), doktor çakışması (FR-013) ve hasta çakışması (FR-012) → 409; başarı 201 AKTIF; try-catch
-- [ ] T022 [US2] Randevu iptal fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `cancel` (DELETE `:id`): sahiplik kontrolü (FR-015, başkası→403), status→IPTAL; try-catch
-- [ ] T023 [US2] Hasta randevuları fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getMine` (GET `/me`): yalnızca giriş yapan hastanın AKTIF randevuları, doctor+department include; try-catch
-- [ ] T024 [US3] Doktor ajanda fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getDoctorAgenda` (GET `/doctor`): yalnızca giriş yapan doktorun randevuları, tarih+saate sıralı, rol DOKTOR değilse 403; try-catch
-- [ ] T025 [US1] Kalan appointment route'larını ekle: `backend/src/routes/appointmentRoutes.js` — POST `/api/appointments`, DELETE `/api/appointments/:id`, GET `/api/appointments/me`, GET `/api/appointments/doctor` (hepsi authMiddleware)
-- [ ] T026 [US1] Tüm randevu uçlarını manuel doğrula (curl/REST client): quickstart.md Senaryo 3–6 (çakışma, geçmiş tarih, iptal sonrası slot boşa çıkma)
+- [X] T021 [US1] Randevu oluşturma: `backend/src/controllers/appointmentController.js` — `createAppointment` (POST): slot geçerliliği, geçmiş tarih/saat reddi (FR-014), doktor slot çakışması (FR-013), hastanın aynı gün AKTIF randevusu (FR-012) → 409; başarı 201 AKTIF + onay e-postası; try-catch
+- [X] T022 [US2] Randevu iptal: `appointmentController.js` — `cancelAppointment` (DELETE `:id`): sahibi hasta **veya ADMIN** (FR-015, aksi→403), zaten IPTAL→400, status→IPTAL + iptal e-postası; try-catch
+- [X] T023 [US2] `getMyAppointments` (GET `/me`): yalnızca giriş yapan hastanın AKTIF randevuları, doctor+department include, tarih+saate sıralı; try-catch
+- [X] T024 [US3] `getDoctorAgenda` (GET `/doctor`): yalnızca giriş yapan doktorun AKTIF randevuları (userId→doctor), patient include, sıralı, rol DOKTOR değilse 403; try-catch
+- [X] T025 [US1] appointment route'ları: `backend/src/routes/appointmentRoutes.js` — GET `/available`, GET `/me`, GET `/doctor`, POST `/`, DELETE `/:id` (hepsi authenticate)
+- [X] T026 [US1] Randevu + review + e-posta + /me + /doctor uçları doğrulandı: **24/24 + 8/8 entegrasyon testi** geçti; Ethereal ile 4 e-posta önizlemesi üretildi.
+- [X] T5-E [US1] E-posta altyapısı: `backend/src/utils/email.js` (nodemailer, Ethereal SMTP) — `sendAppointmentConfirmation`, `sendAppointmentCancellation`; oluştur/iptal'de best-effort çağrılıyor. (yönetici talebi)
+- [X] T5-R Değerlendirme ucu: `backend/src/controllers/reviewController.js` + `routes/reviewRoutes.js` — POST `/api/reviews` (geçmiş+AKTIF+sahiplik+1-5+tek/randevu). (yönetici talebi)
 
-**Checkpoint**: Backend API tamamen çalışıyor ve iş kuralları zorlanıyor. FAZ 1 bitti.
+**Checkpoint**: ✅ **FAZ 1 (Backend) TAMAMLANDI** — tüm randevu/review/e-posta/me/doctor uçları çalışıyor ve test edildi (toplam 32 entegrasyon testi yeşil).
 
 ---
 
