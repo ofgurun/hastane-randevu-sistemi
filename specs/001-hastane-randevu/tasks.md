@@ -1,0 +1,307 @@
+---
+
+description: "Task list for Hastane Randevu Sistemi (MVP) implementation"
+---
+
+# Tasks: Hastane Randevu Sistemi (MVP)
+
+**Input**: Design documents from `/specs/001-hastane-randevu/`
+
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/api.md, quickstart.md
+
+**Tests**: Otomatik test paketi MVP kapsamı dışıdır (bkz. plan.md Complexity Tracking). Doğrulama,
+quickstart.md senaryoları ve manuel HTTP testleriyle yapılır. Bu nedenle ayrı test görevleri
+üretilmemiştir.
+
+**Organization**: Görevler, kullanıcının 15 günlük planına (Adım Adım İlerle — Constitution İlke IV)
+sadık kalınarak gün-gün fazlara bölünmüştür; her görev izlenebilirlik için ilgili kullanıcı
+hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Paralel çalıştırılabilir (farklı dosyalar, bağımlılık yok)
+- **[Story]**: Görevin hizmet ettiği kullanıcı hikâyesi (US1/US2/US3); Setup ve cila görevlerinde etiket yoktur
+- Her görevde kesin dosya yolu belirtilmiştir
+
+## Path Conventions
+
+- **Web app**: `backend/src/`, `frontend/src/` (bkz. plan.md Project Structure)
+
+## User Story ↔ Faz Eşlemesi
+
+- **US1 (P1) — Hasta randevu alma**: Gün 3, 4, 5(oluşturma) backend + Gün 6, 7, 8, 9 frontend
+- **US2 (P2) — Randevularım & iptal**: Gün 5(iptal, /me) backend + Gün 10 frontend
+- **US3 (P3) — Doktor ajandası**: Gün 5(/doctor) backend + Gün 11 frontend
+
+---
+
+## FAZ 1 — BACKEND VE API GELİŞTİRME (Gün 1–5)
+
+## Phase 1: Setup — Gün 1 (Proje İskeleti & Veri Modeli)
+
+**Purpose**: Monorepo yapısı, Express + Prisma kurulumu, DB bağlantısı ve modellerin migrate edilmesi.
+
+- [X] T001 Monorepo kök yapısını oluştur: `backend/` ve `frontend/` klasörleri (repo kökünde)
+- [ ] T002 Backend Node projesini başlat ve bağımlılıkları kur: `backend/package.json` (express, @prisma/client, prisma, jsonwebtoken, bcryptjs, cors, dotenv; dev: nodemon) — ⏳ `package.json` yazıldı; `npm install` **Node.js kurulumu bekliyor**
+- [X] T003 [P] Ortam ve git dosyalarını oluştur: `backend/.env.example` (DATABASE_URL, JWT_SECRET, PORT) ve `backend/.gitignore` (node_modules, .env) — ayrıca gerçek `backend/.env` (gitignore'lı, Supabase URL'leri + üretilmiş JWT_SECRET; parola placeholder)
+- [X] T004 Prisma'yı başlat ve datasource/generator'ı ayarla: `backend/prisma/schema.prisma` (provider: postgresql, url: env(DATABASE_URL), directUrl: env(DIRECT_URL))
+- [X] T005 Prisma modellerini ve enum'ları tanımla: `backend/prisma/schema.prisma` — `Role`(HASTA|DOKTOR|ADMIN), `AppointmentStatus`(AKTIF|IPTAL), `User`, `Department`, `Doctor`, `Appointment` (data-model.md'ye göre alanlar ve ilişkiler; `@@unique([doctorId, date, timeSlot])`)
+- [ ] T006 İlk migration'ı çalıştır: `npx prisma migrate dev --name init` (backend kökünde) ve veritabanı bağlantısını doğrula — ⏳ **Node.js kurulumu + gerçek DB parolası bekliyor**
+- [X] T007 Prisma client singleton'ını oluştur: `backend/src/models/prismaClient.js`
+- [X] T008 Express uygulama girişini oluştur: `backend/src/index.js` (cors, express.json, `/api` taban router'ı + `/api/health`, PORT'ta dinleme)
+
+**Checkpoint**: Sunucu ayağa kalkıyor, veritabanı bağlı ve modeller migrate edilmiş.
+
+---
+
+## Phase 2: Foundational — Gün 2 (Auth & Middleware — Bloklayıcı)
+
+**Purpose**: Tüm korumalı uçların dayandığı kimlik doğrulama ve merkezi hata yönetimi altyapısı.
+
+**⚠️ CRITICAL**: Bu faz tamamlanmadan hiçbir kullanıcı hikâyesi uçları çalıştırılamaz.
+
+- [ ] T009 [P] Merkezi hata yönetimi middleware'ini oluştur: `backend/src/middlewares/errorHandler.js` (JSON `{ "error": ... }`, uygun HTTP kodu, ham detay sızdırmaz — Constitution İlke III)
+- [ ] T010 [P] Kimlik doğrulama yardımcılarını oluştur: `backend/src/utils/auth.js` (bcryptjs hash/compare, jwt sign/verify; JWT_SECRET env'den)
+- [ ] T011 JWT auth middleware'ini oluştur: `backend/src/middlewares/authMiddleware.js` (Bearer token doğrula, `req.user` doldur, opsiyonel rol kontrolü) — T010'a bağlı
+- [ ] T012 Auth controller'ını yaz: `backend/src/controllers/authController.js` — `register` (varsayılan rol HASTA, parola hash), `login` (JWT üret); her ikisi de try-catch (contracts/api.md'ye göre) — T010'a bağlı
+- [ ] T013 Auth route'larını oluştur ve bağla: `backend/src/routes/authRoutes.js` (POST `/api/auth/register`, POST `/api/auth/login`) ve `backend/src/index.js` içine mount et; errorHandler'ı en sona ekle
+
+**Checkpoint**: Kayıt/giriş çalışıyor, JWT üretiliyor, korumalı uçlar için middleware hazır.
+
+---
+
+## Phase 3: User Story 1 (Backend) — Gün 3 (Bölüm & Doktor API)
+
+**Goal (US1)**: Hastanın bölümleri ve doktorları görüntüleyebilmesi.
+
+**Independent Test**: `GET /api/departments` 5 bölüm; `GET /api/doctors?departmentId=<id>` yalnızca o bölümün doktorlarını döner.
+
+- [ ] T014 [P] [US1] Bölüm controller'ını yaz: `backend/src/controllers/departmentController.js` — `getAll` (try-catch)
+- [ ] T015 [P] [US1] Doktor controller'ını yaz: `backend/src/controllers/doctorController.js` — `getAll` (opsiyonel `departmentId` query filtresi, user+department include; try-catch)
+- [ ] T016 [US1] Bölüm route'unu oluştur ve bağla: `backend/src/routes/departmentRoutes.js` (GET `/api/departments`) + `index.js` mount
+- [ ] T017 [US1] Doktor route'unu oluştur ve bağla: `backend/src/routes/doctorRoutes.js` (GET `/api/doctors`) + `index.js` mount
+
+**Checkpoint**: Bölüm ve doktor listeleme uçları çalışıyor.
+
+---
+
+## Phase 4: User Story 1 (Backend) — Gün 4 (Randevu Motoru — Boş Slotlar)
+
+**Goal (US1)**: Bir doktor ve tarih için boş 30 dk slotların hesaplanıp listelenmesi.
+
+**Independent Test**: `GET /api/appointments/available?doctorId=<id>&date=<gelecek>` dolu olmayan slotları döner; bugün için geçmiş slotlar hariç.
+
+- [ ] T018 [P] [US1] Slot yardımcılarını yaz: `backend/src/utils/slots.js` — `generateSlots()` (09:00–16:30, 30 dk), `isPastSlot(date, timeSlot)` (data-model.md/research.md Karar 3)
+- [ ] T019 [US1] Appointment controller'ına boş slot fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getAvailable` (tüm slotlar − ilgili doctor+date AKTIF randevular; bugünse geçmiş slotları çıkar; try-catch) — T018'e bağlı
+- [ ] T020 [US1] Appointment route dosyasını oluştur ve GET `/api/appointments/available` ucunu (authMiddleware) ekle + `index.js` mount: `backend/src/routes/appointmentRoutes.js`
+
+**Checkpoint**: Boş slot hesabı doğru çalışıyor (dolu ve geçmiş slotlar hariç).
+
+---
+
+## Phase 5: User Stories 1/2/3 (Backend) — Gün 5 (Randevu Oluşturma/İptal/Listeleme)
+
+**Goal**: Randevu oluşturma (US1), iptal + kendi randevuları (US2), doktor ajandası (US3) uçları ve iş kuralı kontrolleri.
+
+**Independent Test**: quickstart.md Senaryo 4–6 (çakışma 409, geçmiş 400, iptal→slot boşa çıkar, yalnızca kendi verisi).
+
+- [ ] T021 [US1] Randevu oluşturma fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `create` (POST): slot geçerliliği, geçmiş tarih/saat reddi (FR-014), doktor çakışması (FR-013) ve hasta çakışması (FR-012) → 409; başarı 201 AKTIF; try-catch
+- [ ] T022 [US2] Randevu iptal fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `cancel` (DELETE `:id`): sahiplik kontrolü (FR-015, başkası→403), status→IPTAL; try-catch
+- [ ] T023 [US2] Hasta randevuları fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getMine` (GET `/me`): yalnızca giriş yapan hastanın AKTIF randevuları, doctor+department include; try-catch
+- [ ] T024 [US3] Doktor ajanda fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getDoctorAgenda` (GET `/doctor`): yalnızca giriş yapan doktorun randevuları, tarih+saate sıralı, rol DOKTOR değilse 403; try-catch
+- [ ] T025 [US1] Kalan appointment route'larını ekle: `backend/src/routes/appointmentRoutes.js` — POST `/api/appointments`, DELETE `/api/appointments/:id`, GET `/api/appointments/me`, GET `/api/appointments/doctor` (hepsi authMiddleware)
+- [ ] T026 [US1] Tüm randevu uçlarını manuel doğrula (curl/REST client): quickstart.md Senaryo 3–6 (çakışma, geçmiş tarih, iptal sonrası slot boşa çıkma)
+
+**Checkpoint**: Backend API tamamen çalışıyor ve iş kuralları zorlanıyor. FAZ 1 bitti.
+
+---
+
+## FAZ 2 — FRONTEND VE UI GELİŞTİRME (Gün 6–10)
+
+## Phase 6: User Story 1 (Frontend) — Gün 6 (Vite Projesi, Router, MUI, Login/Register)
+
+**Goal (US1)**: React/Vite iskeleti, yönlendirme, UI kütüphanesi ve giriş/kayıt sayfa tasarımları.
+
+- [ ] T027 Frontend Vite React projesini başlat ve bağımlılıkları kur: `frontend/` (react, react-dom, react-router-dom, @mui/material, @emotion/react, @emotion/styled, axios, zustand)
+- [ ] T028 [P] Uygulama girişini ve router'ı kur: `frontend/src/main.jsx`, `frontend/src/App.jsx`, `frontend/src/router/index.jsx` (route tanımları)
+- [ ] T029 [P] [US1] Giriş sayfasını tasarla: `frontend/src/pages/Login.jsx` (MUI form: email, parola)
+- [ ] T030 [P] [US1] Kayıt sayfasını tasarla: `frontend/src/pages/Register.jsx` (MUI form: ad, email, parola)
+
+**Checkpoint**: Frontend ayağa kalkıyor, Login/Register sayfaları görüntüleniyor.
+
+---
+
+## Phase 7: User Story 1 (Frontend) — Gün 7 (Zustand Auth + Axios Interceptor)
+
+**Goal (US1)**: Auth durum yönetimi, JWT'nin localStorage'a yazılması ve Axios interceptor.
+
+- [ ] T031 [US1] Zustand auth store'unu oluştur: `frontend/src/store/authStore.js` (token, user, login/logout; JWT localStorage persist)
+- [ ] T032 [US1] Axios instance + request interceptor: `frontend/src/services/api.js` (baseURL, `Authorization: Bearer` başlığını ekle) — T031'e bağlı
+- [ ] T033 [US1] Auth servisi ve sayfa bağlama: `frontend/src/services/authService.js` (register, login) — Login/Register sayfalarını store'a bağla — T031, T032'ye bağlı
+
+**Checkpoint**: Giriş yapınca token saklanıyor ve isteklere ekleniyor.
+
+---
+
+## Phase 8: User Story 1 (Frontend) — Gün 8 (Hasta Ana Sayfası — Bölüm/Doktor Listesi)
+
+**Goal (US1)**: Bölümlerin ve doktorların listelenmesi.
+
+- [ ] T034 [P] [US1] Bölüm ve doktor servislerini yaz: `frontend/src/services/departmentService.js`, `frontend/src/services/doctorService.js` (api.js kullanır)
+- [ ] T035 [US1] Ana sayfayı oluştur: `frontend/src/pages/Home.jsx` (bölümleri listele, seçilen bölüme göre doktorları göster) — T034'e bağlı
+
+**Checkpoint**: Hasta bölüm ve doktorları görüntüleyebiliyor.
+
+---
+
+## Phase 9: User Story 1 (Frontend) — Gün 9 (Randevu Alma Ekranı)
+
+**Goal (US1)**: Tarih seçici + boş slot listesi + randevu oluşturma. Bu, US1'in uçtan uca tamamlanmasıdır (MVP).
+
+- [ ] T036 [P] [US1] Randevu servisini yaz: `frontend/src/services/appointmentService.js` (getAvailable, create)
+- [ ] T037 [P] [US1] Tarih seçici bileşenini oluştur: `frontend/src/components/DateSelector.jsx`
+- [ ] T038 [P] [US1] Slot listesi bileşenini oluştur: `frontend/src/components/SlotList.jsx`
+- [ ] T039 [US1] Randevu alma sayfasını oluştur: `frontend/src/pages/RandevuAl.jsx` (doktor+tarih seç, boş slotları listele, seç ve randevu al) — T036, T037, T038'e bağlı
+
+**Checkpoint 🎯 MVP**: Hasta kayıt/giriş → bölüm/doktor → tarih/slot → randevu alma akışını uçtan uca tamamlayabiliyor.
+
+---
+
+## Phase 10: User Story 2 (Frontend) — Gün 10 (Randevularım & İptal)
+
+**Goal (US2)**: Hastanın aktif randevularını görüp iptal edebilmesi.
+
+**Independent Test**: "Randevularım" ekranı yalnızca kendi aktif randevularını gösterir; iptal sonrası slot yeniden boşa çıkar.
+
+- [ ] T040 [US2] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getMine`, `cancel`
+- [ ] T041 [US2] Randevularım sayfasını oluştur: `frontend/src/pages/Randevularim.jsx` (aktif randevuları listele, iptal butonu) — T040'a bağlı
+
+**Checkpoint**: US1 ve US2 bağımsız olarak çalışıyor. FAZ 2 bitti.
+
+---
+
+## FAZ 3 — DOKTOR PANELİ, TEST VE CİLA (Gün 11–15)
+
+## Phase 11: User Story 3 (Frontend) — Gün 11 (Doktor Ajandası)
+
+**Goal (US3)**: Doktorun kendi randevularını liste/ajanda olarak görmesi.
+
+**Independent Test**: Doktor rolüyle giriş → yalnızca kendi randevuları tarih+saate sıralı listelenir.
+
+- [ ] T042 [US3] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getDoctorAgenda`
+- [ ] T043 [US3] Doktor ajanda sayfasını oluştur: `frontend/src/pages/DoktorAjanda.jsx` (kendi randevuları, tarih+saate sıralı) — T042'ye bağlı
+
+**Checkpoint**: Üç kullanıcı hikâyesi de bağımsız olarak çalışıyor.
+
+---
+
+## Phase 12: Polish — Gün 12 (Form Validasyonları & Toast Bildirimleri)
+
+**Purpose**: Tüm hikâyeleri etkileyen kesişen iyileştirmeler.
+
+- [ ] T044 [P] Toast/bildirim bileşenini (veya sağlayıcısını) oluştur: `frontend/src/components/Toast.jsx`
+- [ ] T045 İstemci tarafı form validasyonlarını ekle: `frontend/src/pages/Login.jsx`, `frontend/src/pages/Register.jsx`, `frontend/src/pages/RandevuAl.jsx` (zorunlu alan, email formatı, tarih/slot seçimi)
+- [ ] T046 Başarı/hata toast bildirimlerini sayfalara bağla (API `{ "error": ... }` cevaplarını göster): tüm hasta/doktor sayfaları
+
+**Checkpoint**: Formlar doğrulanıyor, kullanıcı geri bildirimleri toast ile gösteriliyor.
+
+---
+
+## Phase 13: Polish — Gün 13 (Güvenlik — Protected Routes)
+
+- [ ] T047 ProtectedRoute bileşenini oluştur: `frontend/src/router/ProtectedRoute.jsx` (token yoksa Login'e yönlendir; opsiyonel rol kontrolü — doktor sayfası DOKTOR'a)
+- [ ] T048 Korumalı sayfaları sarmala: `frontend/src/router/index.jsx` — Home, RandevuAl, Randevularim, DoktorAjanda için ProtectedRoute uygula
+
+**Checkpoint**: Yetkisiz erişim engelleniyor (SC-006).
+
+---
+
+## Phase 14: Polish — Gün 14 (Prisma Seed — Sahte Veri)
+
+- [ ] T049 Prisma seed script'ini yaz: `backend/prisma/seed.js` (5 bölüm, 10 doktor + ilgili DOKTOR User'ları, örnek randevular) ve `backend/package.json`'a `prisma.seed` / `npm run seed` ekle
+- [ ] T050 Seed'i çalıştır ve veriyi doğrula: `npm run seed` (backend) → 5 bölüm, 10 doktor, örnek randevular oluştu
+
+**Checkpoint**: Sunum için gerçekçi veri hazır.
+
+---
+
+## Phase 15: Polish — Gün 15 (Kod Temizliği & Dokümantasyon)
+
+- [ ] T051 [P] `README.md` yaz (repo kökü): kurulum, ortam değişkenleri, backend/frontend çalıştırma, API uçları özeti (contracts/api.md'ye referans)
+- [ ] T052 Kod temizliği: kullanılmayan kodu kaldır, hata cevaplarını tutarlı hale getir, modüler yapıyı doğrula (backend routes/controllers/middlewares/models/utils; frontend pages/components/services/store)
+- [ ] T053 Tam uçtan uca doğrulama: quickstart.md tüm senaryoları (1–6 + UI akışı) çalıştır ve geç
+
+**Checkpoint**: Proje teslime hazır. FAZ 3 bitti.
+
+---
+
+## Dependencies & Execution Order
+
+### Phase (Gün) Bağımlılıkları
+
+- **Setup (Gün 1)**: Bağımlılık yok — hemen başlar.
+- **Foundational (Gün 2)**: Gün 1'e bağlı — TÜM kullanıcı hikâyesi uçlarını bloklar.
+- **Backend hikâye fazları (Gün 3–5)**: Gün 2'ye bağlı; kendi aralarında sıralı (Gün 3 → 4 → 5).
+- **Frontend (Gün 6–11)**: İlgili backend uçlarına bağlı; Gün 6 → 7 → 8 → 9 → 10 → 11 sırasıyla.
+- **Cila (Gün 12–15)**: İlgili ekranların tamamlanmasına bağlı.
+
+Constitution İlke IV (Adım Adım İlerle): Planlanan gün bitmeden bir sonrakine geçilmez; backend (Gün 1–5) frontend'den (Gün 6–10) önce tamamlanır.
+
+### Kullanıcı Hikâyesi Bağımlılıkları
+
+- **US1 (P1)**: Foundational sonrası başlar; diğer hikâyelere bağlı değil. MVP çekirdeği.
+- **US2 (P2)**: Foundational + US1 randevu altyapısına dayanır (iptal edilecek randevu gerekir).
+- **US3 (P3)**: Foundational sonrası bağımsız; randevu verisi seed/US1 ile beslenir.
+
+### Bir Hikâye İçinde
+
+- Utils/servis → controller/endpoint → route → UI sayfası sırası.
+- Backend ucu, ilgili frontend ekranından önce.
+
+## Parallel Opportunities
+
+- Gün 1: T003 [P] diğer setup adımlarıyla paralel.
+- Gün 2: T009 [P], T010 [P] paralel; T011/T012 T010'a bağlı.
+- Gün 3: T014 [P], T015 [P] paralel (farklı controller dosyaları).
+- Gün 4: T018 [P] bağımsız.
+- Gün 6: T028/T029/T030 [P] paralel (farklı dosyalar).
+- Gün 8: T034 [P] bağımsız.
+- Gün 9: T036/T037/T038 [P] paralel (servis + iki bileşen).
+- Gün 12: T044 [P] bağımsız.
+- Gün 15: T051 [P] bağımsız.
+
+### Parallel Example: Gün 3 (US1 Backend)
+
+```bash
+Task: "departmentController.js — getAll (backend/src/controllers/departmentController.js)"
+Task: "doctorController.js — getAll + departmentId filtresi (backend/src/controllers/doctorController.js)"
+```
+
+---
+
+## Implementation Strategy
+
+### MVP First (User Story 1)
+
+1. Gün 1 Setup → Gün 2 Foundational (Auth) tamamla.
+2. Gün 3–5(oluşturma) backend + Gün 6–9 frontend ile US1'i tamamla.
+3. **DUR ve DOĞRULA**: quickstart Senaryo 1–4 ve UI randevu alma akışı.
+4. Bu nokta gösterilebilir MVP'dir.
+
+### Incremental Delivery
+
+1. US1 (Gün 1–9) → MVP.
+2. US2 (Gün 5 iptal/me + Gün 10) → randevu yönetimi.
+3. US3 (Gün 5 /doctor + Gün 11) → doktor ajandası.
+4. Cila (Gün 12–15) → validasyon, güvenlik, seed, dokümantasyon.
+
+---
+
+## Notes
+
+- [P] = farklı dosyalar, bağımlılık yok.
+- [Story] etiketi görevi ilgili kullanıcı hikâyesine izlenebilir kılar.
+- Her API ucu try-catch + JSON hata cevabı içerir (Constitution İlke III).
+- Modüler yapı korunur (Constitution İlke II).
+- Plan dışı özellik eklenmez (Constitution İlke I — Sadece İsteneni Yap).
+- Her checkpoint'te ilgili hikâye bağımsız doğrulanabilir.

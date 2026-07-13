@@ -1,0 +1,77 @@
+// Prisma şeması — Hastane Randevu Sistemi (MVP)
+// data-model.md'ye göre: User, Department, Doctor, Appointment + enum'lar
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// --- Enum'lar ---
+
+enum Role {
+  HASTA
+  DOKTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  AKTIF
+  IPTAL
+}
+
+// --- Modeller ---
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String // yalnızca bcrypt hash saklanır
+  role      Role     @default(HASTA)
+  createdAt DateTime @default(now())
+
+  // İlişkiler
+  doctorProfile Doctor?       // DOKTOR ise 1:1 profil
+  appointments  Appointment[] @relation("PatientAppointments") // HASTA olarak alınan randevular
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+
+  doctors Doctor[]
+}
+
+model Doctor {
+  id           Int    @id @default(autoincrement())
+  userId       Int    @unique
+  departmentId Int
+  title        String
+
+  user         User          @relation(fields: [userId], references: [id])
+  department   Department    @relation(fields: [departmentId], references: [id])
+  appointments Appointment[]
+}
+
+model Appointment {
+  id        Int               @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  date      DateTime // randevu günü
+  timeSlot  String // "HH:mm" 30 dk slot (ör. "09:30")
+  status    AppointmentStatus @default(AKTIF)
+  createdAt DateTime          @default(now())
+
+  patient User   @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor  Doctor @relation(fields: [doctorId], references: [id])
+
+  // Çakışma önleme (ikinci savunma hattı): aynı doktor+tarih+slot tekil.
+  // Birincil güvence uygulama katmanı AKTIF kontrolüdür (research.md Karar 4).
+  @@unique([doctorId, date, timeSlot])
+  @@index([patientId])
+}

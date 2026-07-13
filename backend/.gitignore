@@ -1,0 +1,22 @@
+# Bağımlılıklar
+node_modules/
+
+# Ortam değişkenleri (gizli)
+.env
+.env.local
+.env.*.local
+
+# Loglar
+*.log
+npm-debug.log*
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# İşletim sistemi / editör
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
