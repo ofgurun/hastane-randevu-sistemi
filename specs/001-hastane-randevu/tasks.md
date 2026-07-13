@@ -130,16 +130,17 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 ## FAZ 2 — FRONTEND VE UI GELİŞTİRME (Gün 6–10)
 
-## Phase 6: User Story 1 (Frontend) — Gün 6 (Vite Projesi, Router, MUI, Login/Register)
+## Phase 6: User Story 1 (Frontend) — Gün 6 (Vite Projesi, Router, **Tailwind CSS**, Login/Register)
 
 **Goal (US1)**: React/Vite iskeleti, yönlendirme, UI kütüphanesi ve giriş/kayıt sayfa tasarımları.
+**Not (Gün 6):** UI kütüphanesi **MUI → Tailwind CSS** olarak değiştirildi (proje sahibi kararı). Gün 6 yalnızca UI; API/Zustand Gün 7'de.
 
-- [ ] T027 Frontend Vite React projesini başlat ve bağımlılıkları kur: `frontend/` (react, react-dom, react-router-dom, @mui/material, @emotion/react, @emotion/styled, axios, zustand)
-- [ ] T028 [P] Uygulama girişini ve router'ı kur: `frontend/src/main.jsx`, `frontend/src/App.jsx`, `frontend/src/router/index.jsx` (route tanımları)
-- [ ] T029 [P] [US1] Giriş sayfasını tasarla: `frontend/src/pages/Login.jsx` (MUI form: email, parola)
-- [ ] T030 [P] [US1] Kayıt sayfasını tasarla: `frontend/src/pages/Register.jsx` (MUI form: ad, email, parola)
+- [X] T027 Frontend Vite React projesini başlat ve bağımlılıkları kur: `frontend/` (react, react-dom, react-router-dom, **tailwindcss@3 + postcss + autoprefixer**, axios, lucide-react). tailwind.config.js + index.css yapılandırıldı.
+- [X] T028 [P] Uygulama girişini ve router'ı kur: `frontend/src/main.jsx` (mevcut), `frontend/src/App.jsx` (BrowserRouter + Routes; `/login`, `/register`, `/` ve `*` → /login yönlendirme)
+- [X] T029 [P] [US1] Giriş sayfasını tasarla: `frontend/src/pages/Login.jsx` (Tailwind, email + şifre; paylaşılan `AuthLayout` + `TextField` bileşenleri, hastane mavi/lacivert teması)
+- [X] T030 [P] [US1] Kayıt sayfasını tasarla: `frontend/src/pages/Register.jsx` (Tailwind, ad + email + şifre)
 
-**Checkpoint**: Frontend ayağa kalkıyor, Login/Register sayfaları görüntüleniyor.
+**Checkpoint**: ✅ Frontend derleniyor (vite build) ve dev sunucusu HTTP 200 veriyor; Login/Register sayfaları hazır (UI-only). Klasörler `components/`, `pages/`, `services/`, `store/` oluşturuldu.
 
 ---
 

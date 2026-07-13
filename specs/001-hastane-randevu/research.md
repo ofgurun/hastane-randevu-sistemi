@@ -45,15 +45,18 @@ sabitler. MVP kapsamı ve "Sadece İsteneni Yap" ilkesi tüm kararların üzerin
 - **Alternatives considered**: Yalnızca uygulama katmanı kontrolü (yarış durumu riski), her slot
   için satır kilidi (MVP ölçeği için gereksiz).
 
-## Karar 5: Frontend Yığını (React + Vite + Zustand + Axios + MUI)
+## Karar 5: Frontend Yığını (React + Vite + Zustand + Axios + Tailwind CSS)
 
 - **Decision**: React (Vite) SPA; global auth durumu Zustand ile; API çağrıları Axios ile;
-  token'ı otomatik ekleyen bir Axios request interceptor; UI için MUI (varsayılan). Yönlendirme
-  React Router; korumalı sayfalar `ProtectedRoute` sarmalayıcısıyla.
-- **Rationale**: Anayasa yığınıyla birebir. Zustand minimal boilerplate ile auth state sağlar;
-  Axios interceptor tek noktadan token yönetimi verir. MUI hazır bileşenlerle hızlı UI kurar.
+  token'ı otomatik ekleyen bir Axios request interceptor; UI için **Tailwind CSS** (+ lucide-react
+  ikonlar). Yönlendirme React Router; korumalı sayfalar `ProtectedRoute` sarmalayıcısıyla.
+- **Rationale**: Anayasa yığınıyla birebir (anayasa "MUI veya Tailwind" der). Zustand minimal
+  boilerplate ile auth state sağlar; Axios interceptor tek noktadan token yönetimi verir.
+  Tailwind, utility-first yaklaşımıyla özel/tutarlı bir hastane arayüzü üzerinde tam kontrol verir.
+- **Güncelleme (Gün 6)**: UI kütüphanesi MUI'den **Tailwind CSS**'e geçirildi (proje sahibi kararı).
+  Tailwind v3 seçildi (klasik `tailwind.config.js` + PostCSS akışı için).
 - **Alternatives considered**: Redux (fazla boilerplate), fetch (interceptor için elle sarmalama
-  gerekir), Tailwind (geçerli alternatif; MUI hazır bileşen avantajıyla varsayılan seçildi).
+  gerekir), MUI (geçerli alternatif; özel tasarım kontrolü için Tailwind tercih edildi).
 
 ## Karar 6: Hata Yönetimi Deseni
 
@@ -74,6 +77,6 @@ sabitler. MVP kapsamı ve "Sadece İsteneni Yap" ilkesi tüm kararların üzerin
 
 ## Çözülen NEEDS CLARIFICATION
 
-Bu fazda çözülmemiş NEEDS CLARIFICATION kalmamıştır. UI kütüphanesi (MUI vs Tailwind) için MUI
-varsayılan olarak sabitlenmiştir; değiştirilmek istenirse yalnızca frontend bileşen katmanını
-etkiler ve API sözleşmesini değiştirmez.
+Bu fazda çözülmemiş NEEDS CLARIFICATION kalmamıştır. UI kütüphanesi olarak **Tailwind CSS**
+seçilmiştir (Gün 6); bu karar yalnızca frontend bileşen katmanını etkiler ve API sözleşmesini
+değiştirmez.

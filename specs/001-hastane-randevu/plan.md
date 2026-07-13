@@ -21,7 +21,7 @@ API katmanında zorlanır.
 
 **Primary Dependencies**:
 - Backend: Express.js, Prisma ORM, jsonwebtoken (JWT), bcryptjs, cors, dotenv
-- Frontend: React (Vite), React Router, Zustand, Axios, MUI (varsayılan UI kütüphanesi)
+- Frontend: React (Vite), React Router, Zustand, Axios, **Tailwind CSS** (UI; MUI yerine seçildi — Gün 6 kararı), lucide-react (ikonlar)
 
 **Storage**: İlişkisel veritabanı — PostgreSQL (varsayılan) veya MySQL, Prisma ORM üzerinden
 
