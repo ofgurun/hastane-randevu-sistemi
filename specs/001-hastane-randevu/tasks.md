@@ -33,6 +33,16 @@ hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
 - **US2 (P2) — Randevularım & iptal**: Gün 5(iptal, /me) backend + Gün 10 frontend
 - **US3 (P3) — Doktor ajandası**: Gün 5(/doctor) backend + Gün 11 frontend
 
+## Kapsam Güncellemesi (Yönetici Talepleri — 2026-07-13)
+
+Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksinimler eklendi:
+
+- **Admin CRUD**: `POST /api/departments` ve `POST /api/doctors` uçları `authorize("ADMIN")` ile korunuyor. ✅ (Gün 3)
+- **Hizmet Değerlendirmesi**: `Review` modeli şemaya eklendi ve migrate edildi. ✅ (Gün 2 DB). API uçları ileride tanımlanacak.
+- **E-posta Bildirimleri**: `nodemailer` bağımlılığı kuruldu; e-posta gönderim mantığı **Gün 5**'te eklenecek. ⏳
+- **Yanıt Standardizasyonu**: Tüm uçlar `{ success, message, data }` / hata `{ success, message }` döndürüyor + merkezi `errorHandler`. ✅
+- ⚠️ **Spec senkronu bekliyor**: `spec.md` "Kapsam Dışı" bölümü ve `contracts/api.md` bu yeni kapsama göre güncellenmeli (öneri).
+
 ---
 
 ## FAZ 1 — BACKEND VE API GELİŞTİRME (Gün 1–5)
@@ -42,11 +52,11 @@ hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
 **Purpose**: Monorepo yapısı, Express + Prisma kurulumu, DB bağlantısı ve modellerin migrate edilmesi.
 
 - [X] T001 Monorepo kök yapısını oluştur: `backend/` ve `frontend/` klasörleri (repo kökünde)
-- [ ] T002 Backend Node projesini başlat ve bağımlılıkları kur: `backend/package.json` (express, @prisma/client, prisma, jsonwebtoken, bcryptjs, cors, dotenv; dev: nodemon) — ⏳ `package.json` yazıldı; `npm install` **Node.js kurulumu bekliyor**
+- [X] T002 Backend Node projesini başlat ve bağımlılıkları kur: `backend/package.json` (express, @prisma/client, prisma, jsonwebtoken, bcryptjs, cors, dotenv; dev: nodemon) — `npm install` çalıştı (package-lock.json + node_modules)
 - [X] T003 [P] Ortam ve git dosyalarını oluştur: `backend/.env.example` (DATABASE_URL, JWT_SECRET, PORT) ve `backend/.gitignore` (node_modules, .env) — ayrıca gerçek `backend/.env` (gitignore'lı, Supabase URL'leri + üretilmiş JWT_SECRET; parola placeholder)
 - [X] T004 Prisma'yı başlat ve datasource/generator'ı ayarla: `backend/prisma/schema.prisma` (provider: postgresql, url: env(DATABASE_URL), directUrl: env(DIRECT_URL))
 - [X] T005 Prisma modellerini ve enum'ları tanımla: `backend/prisma/schema.prisma` — `Role`(HASTA|DOKTOR|ADMIN), `AppointmentStatus`(AKTIF|IPTAL), `User`, `Department`, `Doctor`, `Appointment` (data-model.md'ye göre alanlar ve ilişkiler; `@@unique([doctorId, date, timeSlot])`)
-- [ ] T006 İlk migration'ı çalıştır: `npx prisma migrate dev --name init` (backend kökünde) ve veritabanı bağlantısını doğrula — ⏳ **Node.js kurulumu + gerçek DB parolası bekliyor**
+- [X] T006 İlk migration'ı çalıştır: `npx prisma migrate dev --name init` (backend kökünde) ve veritabanı bağlantısını doğrula — migration `20260713110436_init` uygulandı, Supabase bağlantısı GET uçlarıyla doğrulandı
 - [X] T007 Prisma client singleton'ını oluştur: `backend/src/models/prismaClient.js`
 - [X] T008 Express uygulama girişini oluştur: `backend/src/index.js` (cors, express.json, `/api` taban router'ı + `/api/health`, PORT'ta dinleme)
 
@@ -60,11 +70,11 @@ hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
 
 **⚠️ CRITICAL**: Bu faz tamamlanmadan hiçbir kullanıcı hikâyesi uçları çalıştırılamaz.
 
-- [ ] T009 [P] Merkezi hata yönetimi middleware'ini oluştur: `backend/src/middlewares/errorHandler.js` (JSON `{ "error": ... }`, uygun HTTP kodu, ham detay sızdırmaz — Constitution İlke III)
-- [ ] T010 [P] Kimlik doğrulama yardımcılarını oluştur: `backend/src/utils/auth.js` (bcryptjs hash/compare, jwt sign/verify; JWT_SECRET env'den)
-- [ ] T011 JWT auth middleware'ini oluştur: `backend/src/middlewares/authMiddleware.js` (Bearer token doğrula, `req.user` doldur, opsiyonel rol kontrolü) — T010'a bağlı
-- [ ] T012 Auth controller'ını yaz: `backend/src/controllers/authController.js` — `register` (varsayılan rol HASTA, parola hash), `login` (JWT üret); her ikisi de try-catch (contracts/api.md'ye göre) — T010'a bağlı
-- [ ] T013 Auth route'larını oluştur ve bağla: `backend/src/routes/authRoutes.js` (POST `/api/auth/register`, POST `/api/auth/login`) ve `backend/src/index.js` içine mount et; errorHandler'ı en sona ekle
+- [X] T009 [P] Merkezi hata yönetimi middleware'ini oluştur: `backend/src/middlewares/errorHandler.js` — `notFound` (JSON 404) + `errorHandler` (yakalanmamış hatalar), format `{ success, message }`, ham detay sızdırmaz; `index.js`'e en sona bağlandı (Constitution İlke III)
+- [ ] T010 [P] ~~Kimlik doğrulama yardımcılarını oluştur: `backend/src/utils/auth.js`~~ — ⚠️ SAPMA: bcryptjs/jwt mantığı `authController.js` ve `authMiddleware.js` içine gömüldü (ayrı util yazılmadı). İşlevsel olarak tam; DRY iyileştirmesi opsiyonel.
+- [X] T011 JWT auth middleware'ini oluştur: `backend/src/middlewares/authMiddleware.js` — `authenticate` (Bearer doğrula, `req.user` doldur) + `authorize(...roles)` (rol tabanlı 403)
+- [X] T012 Auth controller'ını yaz: `backend/src/controllers/authController.js` — `register` (rol istemciden ALINMAZ, her zaman HASTA — güvenlik), `login` (JWT üret); standart `{ success, message, data:{ user, token } }`, try-catch
+- [X] T013 Auth route'larını oluştur ve bağla: `backend/src/routes/authRoutes.js` (POST `/api/auth/register`, `/login`) ve `index.js` mount
 
 **Checkpoint**: Kayıt/giriş çalışıyor, JWT üretiliyor, korumalı uçlar için middleware hazır.
 
@@ -76,12 +86,12 @@ hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
 
 **Independent Test**: `GET /api/departments` 5 bölüm; `GET /api/doctors?departmentId=<id>` yalnızca o bölümün doktorlarını döner.
 
-- [ ] T014 [P] [US1] Bölüm controller'ını yaz: `backend/src/controllers/departmentController.js` — `getAll` (try-catch)
-- [ ] T015 [P] [US1] Doktor controller'ını yaz: `backend/src/controllers/doctorController.js` — `getAll` (opsiyonel `departmentId` query filtresi, user+department include; try-catch)
-- [ ] T016 [US1] Bölüm route'unu oluştur ve bağla: `backend/src/routes/departmentRoutes.js` (GET `/api/departments`) + `index.js` mount
-- [ ] T017 [US1] Doktor route'unu oluştur ve bağla: `backend/src/routes/doctorRoutes.js` (GET `/api/doctors`) + `index.js` mount
+- [X] T014 [P] [US1] Bölüm controller'ını yaz: `backend/src/controllers/departmentController.js` — `getAllDepartments` + `createDepartment` (ADMIN, yönetici talebi), try-catch
+- [X] T015 [P] [US1] Doktor controller'ını yaz: `backend/src/controllers/doctorController.js` — `getAllDoctors` (opsiyonel `departmentId` filtresi, user+department include) + `createDoctor` (ADMIN), try-catch
+- [X] T016 [US1] Bölüm route'unu oluştur ve bağla: `backend/src/routes/departmentRoutes.js` (GET açık, POST `authenticate+authorize("ADMIN")`) + `index.js` mount
+- [X] T017 [US1] Doktor route'unu oluştur ve bağla: `backend/src/routes/doctorRoutes.js` (GET açık, POST `authenticate+authorize("ADMIN")`) + `index.js` mount
 
-**Checkpoint**: Bölüm ve doktor listeleme uçları çalışıyor.
+**Checkpoint**: Bölüm ve doktor listeleme uçları çalışıyor; POST'lar ADMIN korumalı (yönetici talebi).
 
 ---
 
@@ -91,11 +101,11 @@ hikâyesiyle ([US1]/[US2]/[US3]) etiketlenmiştir.
 
 **Independent Test**: `GET /api/appointments/available?doctorId=<id>&date=<gelecek>` dolu olmayan slotları döner; bugün için geçmiş slotlar hariç.
 
-- [ ] T018 [P] [US1] Slot yardımcılarını yaz: `backend/src/utils/slots.js` — `generateSlots()` (09:00–16:30, 30 dk), `isPastSlot(date, timeSlot)` (data-model.md/research.md Karar 3)
-- [ ] T019 [US1] Appointment controller'ına boş slot fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getAvailable` (tüm slotlar − ilgili doctor+date AKTIF randevular; bugünse geçmiş slotları çıkar; try-catch) — T018'e bağlı
-- [ ] T020 [US1] Appointment route dosyasını oluştur ve GET `/api/appointments/available` ucunu (authMiddleware) ekle + `index.js` mount: `backend/src/routes/appointmentRoutes.js`
+- [X] T018 [P] [US1] Slot yardımcılarını yaz: `backend/src/utils/slots.js` — `generateSlots()` (09:00–16:30, 30 dk = 16 slot), `slotToMinutes()` (test edildi)
+- [X] T019 [US1] Appointment controller'ına boş slot fonksiyonunu ekle: `backend/src/controllers/appointmentController.js` — `getAvailableSlots` (tüm slotlar − doctor+date **AKTIF** randevular; bugünse geçmiş slotlar çıkarılır; doktor 404 kontrolü; try-catch)
+- [X] T020 [US1] Appointment route dosyasını oluştur ve GET `/api/appointments/available` ucunu (`authenticate`) ekle + `index.js` mount: `backend/src/routes/appointmentRoutes.js`
 
-**Checkpoint**: Boş slot hesabı doğru çalışıyor (dolu ve geçmiş slotlar hariç).
+**Checkpoint**: Boş slot hesabı doğru çalışıyor (AKTIF dolu ve geçmiş slotlar hariç, IPTAL boşa çıkar). ✅ 15/15 entegrasyon testi geçti.
 
 ---
 

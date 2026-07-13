@@ -13,7 +13,7 @@ const SALT_ROUNDS = 10;
 // ────────────────────────────────────────────
 const register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
 
     // Alan doğrulama
     if (!name || !email || !password) {
@@ -38,13 +38,14 @@ const register = async (req, res) => {
     // Şifreyi hashle
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Kullanıcıyı oluştur (varsayılan rol: HASTA)
+    // Kullanıcıyı oluştur — güvenlik: rol istemciden ALINMAZ, her zaman HASTA.
+    // DOKTOR/ADMIN rolleri yalnızca seed veya yetkili işlemlerle atanır.
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: role || "HASTA",
+        role: "HASTA",
       },
     });
 
@@ -59,12 +60,14 @@ const register = async (req, res) => {
       success: true,
       message: "Kayıt başarılı.",
       data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        token,
       },
-      token,
     });
   } catch (error) {
     console.error("Register hatası:", error);
@@ -123,12 +126,14 @@ const login = async (req, res) => {
       success: true,
       message: "Giriş başarılı.",
       data: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+        token,
       },
-      token,
     });
   } catch (error) {
     console.error("Login hatası:", error);

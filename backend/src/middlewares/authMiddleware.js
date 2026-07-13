@@ -1,6 +1,6 @@
-// Auth Middleware — JWT doğrulama
-// İsteklerdeki Authorization header'ından token'ı doğrular
-// ve req.user'a decoded payload'ı ekler.
+// Auth Middleware — JWT doğrulama ve rol tabanlı yetkilendirme
+// authenticate: Authorization header'ından token'ı doğrular, req.user'ı doldurur.
+// authorize: verilen rollerden birine sahip olmayan istekleri 403 ile reddeder.
 
 const jwt = require("jsonwebtoken");
 
@@ -31,4 +31,18 @@ const authenticate = (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+// Rol tabanlı yetkilendirme — authenticate'ten SONRA kullanılır.
+// Örnek: router.post("/", authenticate, authorize("ADMIN"), handler)
+const authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "Bu işlem için yetkiniz yok.",
+      });
+    }
+    next();
+  };
+};
+
+module.exports = { authenticate, authorize };

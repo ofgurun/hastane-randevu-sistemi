@@ -2,6 +2,7 @@
 // Gün 1: temel sunucu kurulumu (cors, json, /api taban router'ı, sağlık kontrolü).
 // Gün 2: auth route'ları eklendi (/api/auth/register, /api/auth/login).
 // Gün 3: department ve doctor route'ları eklendi.
+// Gün 4: appointment route'ları (boş slotlar) + merkezi hata yakalayıcılar eklendi.
 
 require("dotenv").config();
 
@@ -12,6 +13,10 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
+const appointmentRoutes = require("./routes/appointmentRoutes");
+
+// Merkezi hata yönetimi
+const { notFound, errorHandler } = require("./middlewares/errorHandler");
 
 const app = express();
 
@@ -31,8 +36,15 @@ apiRouter.get("/health", (req, res) => {
 apiRouter.use("/auth", authRoutes);
 apiRouter.use("/departments", departmentRoutes);
 apiRouter.use("/doctors", doctorRoutes);
+apiRouter.use("/appointments", appointmentRoutes);
 
 app.use("/api", apiRouter);
+
+// Tanımlı olmayan route'lar için JSON 404 (tüm route'lardan sonra)
+app.use(notFound);
+
+// Merkezi hata yakalayıcı (en son middleware)
+app.use(errorHandler);
 
 // Sunucuyu başlat
 const PORT = process.env.PORT || 5000;

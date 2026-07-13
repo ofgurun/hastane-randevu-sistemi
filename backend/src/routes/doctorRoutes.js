@@ -7,11 +7,12 @@ const {
   getAllDoctors,
   createDoctor,
 } = require("../controllers/doctorController");
+const { authenticate, authorize } = require("../middlewares/authMiddleware");
 
-// GET  /api/doctors — Tüm doktorları getir (opsiyonel ?departmentId filtresi)
+// GET  /api/doctors — Tüm doktorları getir (opsiyonel ?departmentId filtresi, açık)
 router.get("/", getAllDoctors);
 
-// POST /api/doctors — Yeni doktor profili oluştur
-router.post("/", createDoctor);
+// POST /api/doctors — Yeni doktor profili oluştur (yalnızca ADMIN)
+router.post("/", authenticate, authorize("ADMIN"), createDoctor);
 
 module.exports = router;

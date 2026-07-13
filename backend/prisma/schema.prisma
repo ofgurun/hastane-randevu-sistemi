@@ -35,12 +35,13 @@ model User {
   createdAt DateTime @default(now())
 
   // İlişkiler
-  doctorProfile Doctor?       // DOKTOR ise 1:1 profil
+  doctorProfile Doctor? // DOKTOR ise 1:1 profil
   appointments  Appointment[] @relation("PatientAppointments") // HASTA olarak alınan randevular
+  reviews       Review[] // HASTA olarak bıraktığı değerlendirmeler
 }
 
 model Department {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   name        String
   description String?
 
@@ -56,6 +57,7 @@ model Doctor {
   user         User          @relation(fields: [userId], references: [id])
   department   Department    @relation(fields: [departmentId], references: [id])
   appointments Appointment[]
+  reviews      Review[]
 }
 
 model Appointment {
@@ -67,11 +69,32 @@ model Appointment {
   status    AppointmentStatus @default(AKTIF)
   createdAt DateTime          @default(now())
 
-  patient User   @relation("PatientAppointments", fields: [patientId], references: [id])
-  doctor  Doctor @relation(fields: [doctorId], references: [id])
+  patient User    @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  review  Review?
 
-  // Çakışma önleme (ikinci savunma hattı): aynı doktor+tarih+slot tekil.
-  // Birincil güvence uygulama katmanı AKTIF kontrolüdür (research.md Karar 4).
-  @@unique([doctorId, date, timeSlot])
+  // NOT: (doctorId, date, timeSlot) benzersizlik kısıtı KALDIRILDI.
+  // Çakışma kontrolü uygulama katmanında yalnızca status = 'AKTIF' kayıtlar
+  // üzerinden yapılır; böylece IPTAL satırları slotu bloke etmez (FR-016 / SC-004).
+  @@index([patientId])
+  @@index([doctorId, date])
+}
+
+// --- Hizmet Değerlendirmesi (yönetici talebi) ---
+// Bir randevu için tek bir değerlendirme (appointmentId unique = 1:1).
+model Review {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @unique
+  patientId     Int
+  doctorId      Int
+  rating        Int
+  comment       String
+  createdAt     DateTime @default(now())
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     User        @relation(fields: [patientId], references: [id])
+  doctor      Doctor      @relation(fields: [doctorId], references: [id])
+
+  @@index([doctorId])
   @@index([patientId])
 }

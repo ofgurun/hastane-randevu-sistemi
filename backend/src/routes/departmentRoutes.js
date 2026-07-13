@@ -7,11 +7,12 @@ const {
   getAllDepartments,
   createDepartment,
 } = require("../controllers/departmentController");
+const { authenticate, authorize } = require("../middlewares/authMiddleware");
 
-// GET  /api/departments — Tüm bölümleri getir
+// GET  /api/departments — Tüm bölümleri getir (açık)
 router.get("/", getAllDepartments);
 
-// POST /api/departments — Yeni bölüm ekle
-router.post("/", createDepartment);
+// POST /api/departments — Yeni bölüm ekle (yalnızca ADMIN)
+router.post("/", authenticate, authorize("ADMIN"), createDepartment);
 
 module.exports = router;
