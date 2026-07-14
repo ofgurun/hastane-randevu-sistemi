@@ -148,8 +148,9 @@ listelendiği doğrulanabilir.
 
 **Randevu Görüntüleme**
 
-- **FR-017**: Sistem, bir hastaya yalnızca kendisine ait AKTIF randevuları (doktor, bölüm,
-  tarih, saat) listelemelidir.
+- **FR-017**: Sistem, bir hastaya kendisine ait tüm randevuları (AKTIF ve IPTAL; doktor, bölüm,
+  tarih, saat, durum) tarihe göre yeniden eskiye sıralı listelemelidir. Böylece hasta geçmiş
+  (iptal edilmiş) randevularını da görebilir.
 - **FR-018**: Sistem, bir doktora yalnızca kendisine atanmış randevuları tarih ve saate göre
   sıralı bir liste (ajanda) olarak sunmalıdır.
 

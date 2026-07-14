@@ -238,8 +238,9 @@ const cancelAppointment = async (req, res) => {
 const getMyAppointments = async (req, res) => {
   try {
     const patientId = req.user.id;
+    // Hastanın tüm randevuları (AKTIF + IPTAL), tarihe göre yeniden eskiye sıralı.
     const appointments = await prisma.appointment.findMany({
-      where: { patientId, status: "AKTIF" },
+      where: { patientId },
       include: {
         doctor: {
           select: {
@@ -250,7 +251,7 @@ const getMyAppointments = async (req, res) => {
           },
         },
       },
-      orderBy: [{ date: "asc" }, { timeSlot: "asc" }],
+      orderBy: [{ date: "desc" }, { timeSlot: "desc" }],
     });
     return res.status(200).json({ success: true, data: appointments });
   } catch (error) {

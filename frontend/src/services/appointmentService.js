@@ -24,3 +24,10 @@ export async function cancelAppointment(id) {
   const res = await api.delete(`/appointments/${id}`);
   return res.data.data;
 }
+
+// Giriş yapan doktorun kendi ajandası (AKTİF randevular, tarih+saate sıralı)
+// → [{ id, date, timeSlot, status, patient: { id, name } }]
+export async function getDoctorAppointments() {
+  const res = await api.get("/appointments/doctor");
+  return res.data.data;
+}

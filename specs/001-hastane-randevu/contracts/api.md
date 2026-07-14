@@ -95,7 +95,7 @@ gönderilir (best-effort).
 - **404**: randevu bulunamadı
 
 ### GET /api/appointments/me
-Giriş yapmış hastanın kendi AKTIF randevuları.
+Giriş yapmış hastanın tüm randevuları (AKTIF + IPTAL), tarihe göre yeniden eskiye sıralı.
 
 - **Auth**: Bearer (HASTA)
 - **200**: `{ success, data: [ { id, date, timeSlot, status, doctor: { id, title, user: {name}, department: {name} } } ] }`

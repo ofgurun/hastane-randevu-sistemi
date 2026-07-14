@@ -21,7 +21,11 @@ export default function Login() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const ok = await login(form.get("email"), form.get("password"));
-    if (ok) navigate("/");
+    if (ok) {
+      // Rol bazlı yönlendirme: doktor → ajanda, hasta → ana sayfa.
+      const role = useAuthStore.getState().user?.role;
+      navigate(role === "DOKTOR" ? "/doctor-dashboard" : "/");
+    }
   };
 
   return (

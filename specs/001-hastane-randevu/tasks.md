@@ -205,10 +205,12 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Independent Test**: Doktor rolüyle giriş → yalnızca kendi randevuları tarih+saate sıralı listelenir.
 
-- [ ] T042 [US3] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getDoctorAgenda`
-- [ ] T043 [US3] Doktor ajanda sayfasını oluştur: `frontend/src/pages/DoktorAjanda.jsx` (kendi randevuları, tarih+saate sıralı) — T042'ye bağlı
+- [X] T043 [US2] Backend `/me` güncellemesi: `getMyAppointments` artık AKTİF + IPTAL döndürür, tarihe göre yeniden eskiye sıralı (FR-017 + contracts/api.md güncellendi). Randevularım sayfası artık iptal geçmişini de gösterir.
+- [X] T044 [US3] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getDoctorAppointments()` (GET /appointments/doctor)
+- [X] T045 [US3] Doktor ajanda sayfasını oluştur: `frontend/src/pages/DoctorDashboard.jsx` — read-only ajanda (Tarih, Saat, Hasta Adı, Durum), loading + "Henüz randevunuz yok" empty state
+- [X] T046 [US3] Rol bazlı yönlendirme: `Login.jsx` giriş sonrası DOKTOR→`/doctor-dashboard`, HASTA→`/`; `App.jsx`'e `/doctor-dashboard` rotası (DoctorDashboard içinde DOKTOR rol kontrolü); `Navbar.jsx` doktorda yalnızca "Ajandam" + "Çıkış" gösterir
 
-**Checkpoint**: Üç kullanıcı hikâyesi de bağımsız olarak çalışıyor.
+**Checkpoint**: ✅ Üç kullanıcı hikâyesi de çalışıyor. Doktor giriş → ajanda; hasta geçmiş (iptal) randevularını görüyor. Gün 11 testi **5/5** geçti.
 
 ---
 
