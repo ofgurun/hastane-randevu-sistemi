@@ -177,9 +177,11 @@ listelendiği doğrulanabilir.
 **E-posta Bildirimi (yönetici talebi)**
 
 - **FR-022**: Sistem, bir randevu oluşturulduğunda ve iptal edildiğinde hastaya bilgilendirme
-  e-postası göndermelidir. E-posta gönterim hatası ana işlemi (randevu oluşturma/iptal)
-  başarısız kılmamalıdır (best-effort). Not: hatırlatma e-postaları (zamanlanmış görev) bu
-  sürümde kapsam dışıdır.
+  e-postası göndermelidir. E-posta gönderim hatası ana işlemi (randevu oluşturma/iptal)
+  başarısız kılmamalıdır (best-effort).
+- **FR-023**: Sistem, zamanı 24 saatten az kalmış AKTİF randevular için hastaya bir hatırlatma
+  e-postası göndermeli ve her randevu için yalnızca bir kez göndermelidir (mükerrer engeli).
+  Bu, zamanlanmış bir görevle (cron) yürütülür.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -234,7 +236,7 @@ Aşağıdaki özellikler "Sadece İsteneni Yap" prensibi gereği bu MVP'de **gel
 online ödeme, SMS bildirimleri, randevu erteleme/güncelleme, doktorun randevu
 oluşturması/iptali ve raporlama.
 
-**Kapsama alındı (yönetici talepleri):** ADMIN'in bölüm/doktor oluşturması (API), hizmet
-değerlendirmesi (Review), randevu oluşturma/iptalde bilgilendirme e-postası; **ADMIN yönetim
-paneli UI** (bölüm/doktor yönetimi) ve **randevu öncesi hatırlatma e-postası** (Faz 4 — adım
-adım eklenmektedir; ilk adım: ADMIN hesabı + giriş ✅).
+**Kapsama alındı (yönetici talepleri):** ADMIN'in bölüm/doktor oluşturması (API + panel UI),
+hizmet değerlendirmesi (Review), randevu oluşturma/iptalde bilgilendirme e-postası, **ADMIN
+yönetim paneli UI** (bölüm/doktor yönetimi) ve **randevu öncesi hatırlatma e-postası** (cron).
+✅ Faz 4 tamamlandı — tüm proje gereksinimleri karşılandı.

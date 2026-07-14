@@ -19,6 +19,9 @@ const reviewRoutes = require("./routes/reviewRoutes");
 // Merkezi hata yönetimi
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 
+// Randevu hatırlatma cron görevi
+const { startReminderCron } = require("./utils/cron");
+
 const app = express();
 
 // Middleware
@@ -53,6 +56,8 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda çalışıyor — http://localhost:${PORT}/api/health`);
+  // Randevu hatırlatma görevini başlat
+  startReminderCron();
 });
 
 module.exports = app;

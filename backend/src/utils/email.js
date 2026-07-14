@@ -55,4 +55,13 @@ async function sendAppointmentCancellation(to, { doctorName, date, timeSlot }) {
   );
 }
 
-module.exports = { sendAppointmentConfirmation, sendAppointmentCancellation };
+async function sendReminderEmail(to, patientName, doctorName, date, timeSlot) {
+  return sendMail(
+    to,
+    "Randevu Hatırlatması",
+    `Sayın ${patientName},\n\n${date} tarihinde saat ${timeSlot} için ${doctorName} ile ` +
+      `randevunuz bulunmaktadır. Sizi bekliyoruz.\n\nHastane Randevu Sistemi`
+  );
+}
+
+module.exports = { sendAppointmentConfirmation, sendAppointmentCancellation, sendReminderEmail };

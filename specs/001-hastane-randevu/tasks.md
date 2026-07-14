@@ -286,9 +286,18 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 **Checkpoint**: ✅ Admin doktor ekliyor; eklenen doktor giriş yapabiliyor (test 8/8, orphan user yok).
 
-### Sonraki adımlar (bekliyor)
-- [ ] Adım 4: Randevu öncesi hatırlatma e-postası (`node-cron` + `sendAppointmentReminder`).
-- [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma.
+## Phase 19: Admin Paneli — Adım 4 (Hatırlatma E-postaları)
+
+- [X] T067 Paket + şema: `node-cron` kuruldu; `Appointment`'a `reminderSent Boolean @default(false)` eklendi; migration `add_reminder_sent` uygulandı.
+- [X] T068 Hatırlatma servisi: `email.js`'e `sendReminderEmail(...)`; `utils/cron.js` — `runReminders()` (AKTİF + reminderSent=false + zamanı <24s randevuları bulur, mail atar, reminderSent=true yapar) + `startReminderCron()` (node-cron, her dakika).
+- [X] T069 Bağlama: `index.js` sunucu açılışında `startReminderCron()` çağırıyor.
+
+**Checkpoint**: ✅ Hatırlatma testi **4/4** geçti — Ethereal'e gerçek mail düştü (önizleme URL'i), reminderSent işaretlendi, >24s randevu atlandı, mükerrer engellendi. Sunucu cron ile sorunsuz açılıyor.
+
+**🎀 FAZ 4 TAMAMLANDI — tüm proje gereksinimleri (admin ekranı + hatırlatma) karşılandı.**
+
+### Opsiyonel (bekliyor)
+- [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma (global çalışma saatleri / doktora özel).
 
 ---
 

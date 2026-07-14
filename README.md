@@ -32,7 +32,8 @@ ve doktor tanımlayabilir.
 - 🗂️ **Randevularım**: Aktif ve geçmiş (iptal dahil) randevuların listesi.
 - ⭐ **Değerlendirme (Review)**: Geçmiş randevular için 1–5 yıldız + yorum.
 - 👨‍⚕️ **Doktor Paneli**: Doktorun kendi randevu ajandası (salt-okunur).
-- 📧 **E-posta Bildirimi**: Randevu oluşturma/iptalde bilgilendirme (nodemailer + Ethereal).
+- 🛡️ **Admin Paneli**: Bölüm ve doktor yönetimi (doktor kullanıcı + profili tek transaction'da).
+- 📧 **E-posta Bildirimi**: Randevu oluşturma/iptalde bilgilendirme + **randevu öncesi hatırlatma** (node-cron, nodemailer + Ethereal).
 - 🔒 **Merkezi Güvenlik**: `ProtectedRoute` ile rol bazlı sayfa koruması.
 - 🔔 **Toast Bildirimleri** ve anlık form validasyonları.
 
@@ -60,6 +61,7 @@ ve doktor tanımlayabilir.
 | **JWT (jsonwebtoken)** | Kimlik doğrulama |
 | **bcryptjs** | Parola hash'leme |
 | **nodemailer** | E-posta gönderimi |
+| **node-cron** | Randevu hatırlatma zamanlayıcı |
 
 ---
 

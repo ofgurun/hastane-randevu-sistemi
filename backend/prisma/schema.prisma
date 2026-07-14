@@ -64,10 +64,11 @@ model Appointment {
   id        Int               @id @default(autoincrement())
   patientId Int
   doctorId  Int
-  date      DateTime // randevu günü
-  timeSlot  String // "HH:mm" 30 dk slot (ör. "09:30")
-  status    AppointmentStatus @default(AKTIF)
-  createdAt DateTime          @default(now())
+  date         DateTime // randevu günü
+  timeSlot     String // "HH:mm" 30 dk slot (ör. "09:30")
+  status       AppointmentStatus @default(AKTIF)
+  reminderSent Boolean           @default(false) // hatırlatma e-postası gönderildi mi
+  createdAt    DateTime          @default(now())
 
   patient User    @relation("PatientAppointments", fields: [patientId], references: [id])
   doctor  Doctor  @relation(fields: [doctorId], references: [id])
