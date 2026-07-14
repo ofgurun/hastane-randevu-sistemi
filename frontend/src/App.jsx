@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Appointments from "./pages/Appointments";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
 
@@ -56,6 +57,16 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["DOKTOR"]}>
               <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin paneli */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

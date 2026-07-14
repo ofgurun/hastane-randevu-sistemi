@@ -232,8 +232,9 @@ listelendiği doğrulanabilir.
 
 Aşağıdaki özellikler "Sadece İsteneni Yap" prensibi gereği bu MVP'de **geliştirilmeyecektir**:
 online ödeme, SMS bildirimleri, randevu erteleme/güncelleme, doktorun randevu
-oluşturması/iptali, ADMIN yönetim paneli **UI** ekranları, raporlama ve zamanlanmış
-hatırlatma e-postaları (cron).
+oluşturması/iptali ve raporlama.
 
-**Kapsama alındı (yönetici talebi — 2026-07-13):** ADMIN'in bölüm/doktor oluşturması (API),
-hizmet değerlendirmesi (Review) ve randevu oluşturma/iptalde bilgilendirme e-postası.
+**Kapsama alındı (yönetici talepleri):** ADMIN'in bölüm/doktor oluşturması (API), hizmet
+değerlendirmesi (Review), randevu oluşturma/iptalde bilgilendirme e-postası; **ADMIN yönetim
+paneli UI** (bölüm/doktor yönetimi) ve **randevu öncesi hatırlatma e-postası** (Faz 4 — adım
+adım eklenmektedir; ilk adım: ADMIN hesabı + giriş ✅).

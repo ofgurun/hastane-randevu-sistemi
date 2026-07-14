@@ -1,33 +1,45 @@
 import { Link, useLocation } from "react-router-dom";
-import { LogOut, Home as HomeIcon, CalendarClock, ClipboardList } from "lucide-react";
+import { LogOut, Home as HomeIcon, CalendarClock, ClipboardList, ShieldCheck } from "lucide-react";
 import Logo from "./Logo";
 import useAuthStore from "../store/authStore";
 
-// Paylaşılan üst bar. Doktor ise yalnızca "Ajandam"; hasta ise "Ana Sayfa" + "Randevularım".
+// Paylaşılan üst bar. Role göre menü: ADMIN → Yönetim; DOKTOR → Ajandam;
+// HASTA → Ana Sayfa + Randevularım.
 export default function Navbar() {
   const { user, logout } = useAuthStore();
   const { pathname } = useLocation();
-  const isDoctor = user?.role === "DOKTOR";
+  const role = user?.role;
 
   const linkCls = (active) =>
     `inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
       active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-100"
     }`;
 
-  const links = isDoctor ? (
-    <Link to="/doctor-dashboard" className={linkCls(pathname === "/doctor-dashboard")}>
-      <ClipboardList className="h-4 w-4" /> Ajandam
-    </Link>
-  ) : (
-    <>
-      <Link to="/" className={linkCls(pathname === "/")}>
-        <HomeIcon className="h-4 w-4" /> Ana Sayfa
+  let links;
+  if (role === "ADMIN") {
+    links = (
+      <Link to="/admin" className={linkCls(pathname === "/admin")}>
+        <ShieldCheck className="h-4 w-4" /> Yönetim Paneli
       </Link>
-      <Link to="/appointments" className={linkCls(pathname === "/appointments")}>
-        <CalendarClock className="h-4 w-4" /> Randevularım
+    );
+  } else if (role === "DOKTOR") {
+    links = (
+      <Link to="/doctor-dashboard" className={linkCls(pathname === "/doctor-dashboard")}>
+        <ClipboardList className="h-4 w-4" /> Ajandam
       </Link>
-    </>
-  );
+    );
+  } else {
+    links = (
+      <>
+        <Link to="/" className={linkCls(pathname === "/")}>
+          <HomeIcon className="h-4 w-4" /> Ana Sayfa
+        </Link>
+        <Link to="/appointments" className={linkCls(pathname === "/appointments")}>
+          <CalendarClock className="h-4 w-4" /> Randevularım
+        </Link>
+      </>
+    );
+  }
 
   return (
     <header className="border-b border-slate-200 bg-white">

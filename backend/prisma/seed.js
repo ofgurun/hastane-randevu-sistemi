@@ -23,8 +23,14 @@ async function main() {
   await prisma.department.deleteMany();
   await prisma.user.deleteMany();
 
+  const adminPass = await bcrypt.hash("admin123", 10);
   const doctorPass = await bcrypt.hash("doktor123", 10);
   const patientPass = await bcrypt.hash("hasta123", 10);
+
+  // --- 0) Admin ---
+  await prisma.user.create({
+    data: { name: "Sistem Yöneticisi", email: "admin@medirandevu.local", password: adminPass, role: "ADMIN" },
+  });
 
   // --- 2) Bölümler ---
   const departmentData = [
@@ -99,11 +105,13 @@ async function main() {
 
   // --- Özet ---
   console.log("✅ Seed tamamlandı:");
+  console.log("  Admin  :", await prisma.user.count({ where: { role: "ADMIN" } }), "(şifre: admin123)");
   console.log("  Bölüm  :", await prisma.department.count());
   console.log("  Doktor :", await prisma.doctor.count(), "(şifre: doktor123)");
   console.log("  Hasta  :", await prisma.user.count({ where: { role: "HASTA" } }), "(şifre: hasta123)");
   console.log("  Randevu:", await prisma.appointment.count());
-  console.log("\n  Örnek giriş → hasta1@medirandevu.local / hasta123");
+  console.log("\n  Örnek giriş → admin@medirandevu.local / admin123");
+  console.log("               hasta1@medirandevu.local / hasta123");
   console.log("               ahmet.yilmaz@medirandevu.local / doktor123");
 }
 

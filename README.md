@@ -164,6 +164,7 @@ Tarayıcıda **http://localhost:5173** adresini açın.
 
 | Rol | E-posta | Şifre |
 |-----|---------|-------|
+| 🛡️ Admin | `admin@medirandevu.local` | `admin123` |
 | 👤 Hasta | `hasta1@medirandevu.local` | `hasta123` |
 | 👤 Hasta | `hasta2@medirandevu.local` | `hasta123` |
 | 👨‍⚕️ Doktor | `ahmet.yilmaz@medirandevu.local` | `doktor123` |

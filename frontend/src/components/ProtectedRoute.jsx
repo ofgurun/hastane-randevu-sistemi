@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
+import { homePathForRole } from "../utils/roleRedirect";
 
 // Merkezi güvenlik: giriş yoksa /login'e; allowedRoles verilmişse ve rol uymuyorsa
 // kullanıcının kendi ana sayfasına yönlendirir.
@@ -11,8 +12,8 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user?.role)) {
-    // Yanlış rol → güvenli sayfa (doktor ajandaya, diğerleri ana sayfaya)
-    return <Navigate to={user?.role === "DOKTOR" ? "/doctor-dashboard" : "/"} replace />;
+    // Yanlış rol → kendi rolüne uygun güvenli sayfa
+    return <Navigate to={homePathForRole(user?.role)} replace />;
   }
 
   return children;

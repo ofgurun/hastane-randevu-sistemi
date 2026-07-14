@@ -258,6 +258,27 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 ---
 
+## FAZ 4 — ADMIN PANELİ & HATIRLATMA (proje gereksinimlerini tamamlama)
+
+Proje gereksinimlerinde admin ekranı ve randevu öncesi hatırlatma e-postası vardı; 15 günlük
+planda UI kapsam dışıydı. Adım adım ekleniyor.
+
+## Phase 16: Admin Paneli — Adım 1 (Hesap + Giriş)
+
+- [X] T059 ADMIN hesabı: `seed.js`'e `admin@medirandevu.local / admin123` (rol ADMIN) eklendi.
+- [X] T060 Rol bazlı yönlendirme: `utils/roleRedirect.js` (`homePathForRole`: ADMIN→/admin, DOKTOR→/doctor-dashboard, HASTA→/); Login/GuestRoute/ProtectedRoute güncellendi.
+- [X] T061 Admin rotası + iskelet: `App.jsx`'e `/admin` (ProtectedRoute allowedRoles={["ADMIN"]}); `pages/AdminDashboard.jsx` (giriş + yaklaşan özellikler iskeleti); `Navbar.jsx` ADMIN'e "Yönetim Paneli" gösterir.
+
+**Checkpoint**: ✅ Admin giriş yapıp `/admin`'e ulaşıyor (giriş testi 3/3). Yönetim işlevleri sonraki adımlarda.
+
+### Sonraki adımlar (bekliyor)
+- [ ] Adım 2: Bölüm yönetimi UI (listele + ekle) → `POST /api/departments`.
+- [ ] Adım 3: Doktor yönetimi UI (listele + ekle) → tek adımda DOKTOR kullanıcı + profil (yeni backend ucu gerekir).
+- [ ] Adım 4: Randevu öncesi hatırlatma e-postası (`node-cron` + `sendAppointmentReminder`).
+- [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase (Gün) Bağımlılıkları

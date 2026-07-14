@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import AuthLayout from "../components/AuthLayout";
 import TextField from "../components/TextField";
 import useAuthStore from "../store/authStore";
+import { homePathForRole } from "../utils/roleRedirect";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,9 +32,9 @@ export default function Login() {
     const ok = await login(email, password);
     if (ok) {
       toast.success("Giriş başarılı.");
-      // Rol bazlı yönlendirme: doktor → ajanda, hasta → ana sayfa.
+      // Rol bazlı yönlendirme: admin → panel, doktor → ajanda, hasta → ana sayfa.
       const role = useAuthStore.getState().user?.role;
-      navigate(role === "DOKTOR" ? "/doctor-dashboard" : "/");
+      navigate(homePathForRole(role));
     } else {
       toast.error(useAuthStore.getState().error || "Giriş başarısız.");
     }
