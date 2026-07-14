@@ -239,8 +239,10 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 ## Phase 14: Polish — Gün 14 (Prisma Seed — Sahte Veri)
 
-- [ ] T049 Prisma seed script'ini yaz: `backend/prisma/seed.js` (5 bölüm, 10 doktor + ilgili DOKTOR User'ları, örnek randevular) ve `backend/package.json`'a `prisma.seed` / `npm run seed` ekle
-- [ ] T050 Seed'i çalıştır ve veriyi doğrula: `npm run seed` (backend) → 5 bölüm, 10 doktor, örnek randevular oluştu
+- [X] T054 Prisma seed script'ini yaz: `backend/prisma/seed.js` — önce temizlik (Review→Appointment→Doctor→Department→User), 5 bölüm, 10 doktor (bcrypt, şifre `doktor123`), 2 hasta (`hasta123`), geçmiş (değerlendirilebilir) + gelecek AKTİF + örnek iptal randevular. `package.json` `prisma.seed` / `npm run seed` mevcut (Gün 1).
+- [X] T055 Seed'i çalıştır ve doğrula: `npm run seed` → 5 bölüm, 10 doktor, 2 hasta, 9 randevu. Gerçek login ile doğrulama **8/8** geçti (hasta1: 2 geçmiş-AKTİF, 2 gelecek, 1 iptal; doktor ajandası dolu).
+
+**Checkpoint**: ✅ Veritabanı sunum için tutarlı demo veriyle dolu. Örnek giriş: `hasta1@medirandevu.local`/`hasta123`, `ahmet.yilmaz@medirandevu.local`/`doktor123`.
 
 **Checkpoint**: Sunum için gerçekçi veri hazır.
 
