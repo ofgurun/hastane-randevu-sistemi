@@ -1,8 +1,8 @@
-import { X, User, Loader2, CalendarPlus, AlertCircle } from "lucide-react";
+import { X, User, Loader2, CalendarPlus } from "lucide-react";
 
 // Seçili bölümün doktorlarını gösteren modal.
 // "Randevu Al" (Gün 9) → onBook(doctor) ile randevu alma akışını açar.
-export default function DoctorModal({ department, doctors, loading, error, onClose, onBook }) {
+export default function DoctorModal({ department, doctors, loading, onClose, onBook }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
@@ -35,17 +35,11 @@ export default function DoctorModal({ department, doctors, loading, error, onClo
             </div>
           )}
 
-          {!loading && error && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-              <AlertCircle className="h-4 w-4" /> {error}
-            </div>
-          )}
-
-          {!loading && !error && doctors.length === 0 && (
+          {!loading && doctors.length === 0 && (
             <p className="py-10 text-center text-slate-500">Bu bölümde henüz doktor bulunmuyor.</p>
           )}
 
-          {!loading && !error && doctors.length > 0 && (
+          {!loading && doctors.length > 0 && (
             <ul className="space-y-3">
               {doctors.map((d) => (
                 <li

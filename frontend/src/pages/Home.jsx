@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import DepartmentCard from "../components/DepartmentCard";
 import DoctorModal from "../components/DoctorModal";
@@ -16,13 +17,12 @@ export default function Home() {
 
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(false);
 
   // Seçili bölüm + o bölümün doktorları
   const [selected, setSelected] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
-  const [doctorsError, setDoctorsError] = useState(null);
 
   // Randevu alınacak doktor (BookingModal)
   const [bookingDoctor, setBookingDoctor] = useState(null);
@@ -32,11 +32,14 @@ export default function Home() {
     (async () => {
       try {
         setLoading(true);
-        setError(null);
+        setLoadError(false);
         const data = await getDepartments();
         if (active) setDepartments(data);
       } catch {
-        if (active) setError("Bölümler yüklenemedi. Lütfen tekrar deneyin.");
+        if (active) {
+          setLoadError(true);
+          toast.error("Bölümler yüklenemedi.");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -49,13 +52,13 @@ export default function Home() {
   const openDepartment = async (dept) => {
     setSelected(dept);
     setDoctors([]);
-    setDoctorsError(null);
     setDoctorsLoading(true);
     try {
       const data = await getDoctorsByDepartment(dept.id);
       setDoctors(data);
     } catch {
-      setDoctorsError("Doktorlar yüklenemedi.");
+      toast.error("Doktorlar yüklenemedi.");
+      setSelected(null); // hata: modalı kapat
     } finally {
       setDoctorsLoading(false);
     }
@@ -78,20 +81,18 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && error && (
-          <div className="mt-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-600">
-            <AlertCircle className="h-5 w-5" /> {error}
-          </div>
+        {!loading && loadError && (
+          <p className="py-20 text-center text-slate-500">Bölümler yüklenemedi. Lütfen sayfayı yenileyin.</p>
         )}
 
-        {!loading && !error && departments.length === 0 && (
+        {!loading && !loadError && departments.length === 0 && (
           <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
             <p className="text-slate-500">Henüz bölüm bulunmuyor.</p>
             <p className="mt-1 text-sm text-slate-400">Bölümler eklendiğinde burada görünecek.</p>
           </div>
         )}
 
-        {!loading && !error && departments.length > 0 && (
+        {!loading && !loadError && departments.length > 0 && (
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {departments.map((d) => (
               <DepartmentCard key={d.id} department={d} onClick={() => openDepartment(d)} />
@@ -106,7 +107,6 @@ export default function Home() {
           department={selected}
           doctors={doctors}
           loading={doctorsLoading}
-          error={doctorsError}
           onClose={() => setSelected(null)}
           onBook={(doctor) => {
             setSelected(null); // doktor listesini kapat

@@ -1,30 +1,41 @@
-import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, LogIn, Loader2, AlertCircle } from "lucide-react";
+import { Mail, Lock, LogIn, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import AuthLayout from "../components/AuthLayout";
 import TextField from "../components/TextField";
 import useAuthStore from "../store/authStore";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const error = useAuthStore((s) => s.error);
-  const clearError = useAuthStore((s) => s.clearError);
-
-  // Sayfa açılışında önceki hatayı temizle
-  useEffect(() => {
-    clearError();
-  }, [clearError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const ok = await login(form.get("email"), form.get("password"));
+    const email = (form.get("email") || "").trim();
+    const password = form.get("password") || "";
+
+    // İstek gitmeden önce anlık UI validasyonu
+    if (!EMAIL_RE.test(email)) {
+      toast.error("Geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    const ok = await login(email, password);
     if (ok) {
+      toast.success("Giriş başarılı.");
       // Rol bazlı yönlendirme: doktor → ajanda, hasta → ana sayfa.
       const role = useAuthStore.getState().user?.role;
       navigate(role === "DOKTOR" ? "/doctor-dashboard" : "/");
+    } else {
+      toast.error(useAuthStore.getState().error || "Giriş başarısız.");
     }
   };
 
@@ -34,14 +45,7 @@ export default function Login() {
         <h1 className="text-2xl font-bold text-slate-900">Tekrar hoş geldiniz</h1>
         <p className="mt-1 text-sm text-slate-500">Randevularınıza erişmek için giriş yapın.</p>
 
-        {error && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
           <TextField
             id="email"
             label="E-posta"

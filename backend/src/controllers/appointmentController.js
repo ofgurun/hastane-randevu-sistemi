@@ -272,8 +272,10 @@ const getDoctorAgenda = async (req, res) => {
     if (!doctor) {
       return res.status(404).json({ success: false, message: "Doktor profili bulunamadı." });
     }
+    // Doktorun tüm randevuları (AKTIF + IPTAL), tarih+saate sıralı.
+    // İptal edilenler ajandada farklı/pasif rozetle gösterilir.
     const appointments = await prisma.appointment.findMany({
-      where: { doctorId: doctor.id, status: "AKTIF" },
+      where: { doctorId: doctor.id },
       include: { patient: { select: { id: true, name: true } } },
       orderBy: [{ date: "asc" }, { timeSlot: "asc" }],
     });

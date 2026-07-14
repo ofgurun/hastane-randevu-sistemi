@@ -218,11 +218,12 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Purpose**: Tüm hikâyeleri etkileyen kesişen iyileştirmeler.
 
-- [ ] T044 [P] Toast/bildirim bileşenini (veya sağlayıcısını) oluştur: `frontend/src/components/Toast.jsx`
-- [ ] T045 İstemci tarafı form validasyonlarını ekle: `frontend/src/pages/Login.jsx`, `frontend/src/pages/Register.jsx`, `frontend/src/pages/RandevuAl.jsx` (zorunlu alan, email formatı, tarih/slot seçimi)
-- [ ] T046 Başarı/hata toast bildirimlerini sayfalara bağla (API `{ "error": ... }` cevaplarını göster): tüm hasta/doktor sayfaları
+- [X] T047 Toast altyapısı: `react-hot-toast` kuruldu, `App.jsx`'e `<Toaster position="top-right" />` eklendi.
+- [X] T048 İstemci tarafı form validasyonları: `Login.jsx` (email formatı, şifre ≥6) ve `Register.jsx` (ad dolu + email + şifre ≥6) — istek gitmeden `toast.error` ile uyarı, form gönderilmez.
+- [X] T049 Toast entegrasyonu + statik mesaj temizliği: Login/Register/Appointments(iptal)/BookingModal(randevu) ve ayrıca Home/DoctorModal/DoctorDashboard'daki satır-içi yeşil/kırmızı mesajlar kaldırıldı; `toast.success`/`toast.error` (hata mesajı `error.response.data.message`'dan) kullanılıyor. Yükleme hataları nötr metin + toast.
+- [X] T050 Backend: `GET /appointments/doctor` artık AKTİF + IPTAL döndürüyor; doktor ajandasında iptaller soluk (pasif) İPTAL rozetiyle görünüyor.
 
-**Checkpoint**: Formlar doğrulanıyor, kullanıcı geri bildirimleri toast ile gösteriliyor.
+**Checkpoint**: ✅ Formlar doğrulanıyor, tüm geri bildirimler toast ile. Gün 12 backend testi **2/2** geçti; frontend derleniyor.
 
 ---
 

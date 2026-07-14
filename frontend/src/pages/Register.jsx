@@ -1,26 +1,45 @@
-import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Mail, Lock, UserPlus, Loader2, AlertCircle } from "lucide-react";
+import { User, Mail, Lock, UserPlus, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import AuthLayout from "../components/AuthLayout";
 import TextField from "../components/TextField";
 import useAuthStore from "../store/authStore";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Register() {
   const navigate = useNavigate();
   const register = useAuthStore((s) => s.register);
   const isLoading = useAuthStore((s) => s.isLoading);
-  const error = useAuthStore((s) => s.error);
-  const clearError = useAuthStore((s) => s.clearError);
-
-  useEffect(() => {
-    clearError();
-  }, [clearError]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const ok = await register(form.get("name"), form.get("email"), form.get("password"));
-    if (ok) navigate("/");
+    const name = (form.get("name") || "").trim();
+    const email = (form.get("email") || "").trim();
+    const password = form.get("password") || "";
+
+    // İstek gitmeden önce anlık UI validasyonu
+    if (!name) {
+      toast.error("Ad Soyad alanı boş olamaz.");
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      toast.error("Geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Şifre en az 6 karakter olmalıdır.");
+      return;
+    }
+
+    const ok = await register(name, email, password);
+    if (ok) {
+      toast.success("Kayıt başarılı. Hoş geldiniz!");
+      navigate("/");
+    } else {
+      toast.error(useAuthStore.getState().error || "Kayıt başarısız.");
+    }
   };
 
   return (
@@ -29,14 +48,7 @@ export default function Register() {
         <h1 className="text-2xl font-bold text-slate-900">Hesap oluşturun</h1>
         <p className="mt-1 text-sm text-slate-500">Randevu almaya hemen başlayın.</p>
 
-        {error && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
           <TextField
             id="name"
             label="Ad Soyad"
