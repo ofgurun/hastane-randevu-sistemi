@@ -1,8 +1,8 @@
 import { X, User, Loader2, CalendarPlus, AlertCircle } from "lucide-react";
 
 // Seçili bölümün doktorlarını gösteren modal.
-// "Randevu Al" butonu Gün 8'de PASİF — işlevi Gün 9'da eklenecek.
-export default function DoctorModal({ department, doctors, loading, error, onClose }) {
+// "Randevu Al" (Gün 9) → onBook(doctor) ile randevu alma akışını açar.
+export default function DoctorModal({ department, doctors, loading, error, onClose, onBook }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
@@ -61,12 +61,10 @@ export default function DoctorModal({ department, doctors, loading, error, onClo
                       <p className="text-sm text-slate-500">{d.title}</p>
                     </div>
                   </div>
-                  {/* Gün 9'da aktifleşecek — şimdilik pasif */}
                   <button
                     type="button"
-                    disabled
-                    title="Randevu alma Gün 9'da eklenecek"
-                    className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-400"
+                    onClick={() => onBook(d)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                   >
                     <CalendarPlus className="h-4 w-4" /> Randevu Al
                   </button>

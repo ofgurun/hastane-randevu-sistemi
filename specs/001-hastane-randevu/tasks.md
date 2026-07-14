@@ -173,12 +173,13 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Goal (US1)**: Tarih seçici + boş slot listesi + randevu oluşturma. Bu, US1'in uçtan uca tamamlanmasıdır (MVP).
 
-- [ ] T036 [P] [US1] Randevu servisini yaz: `frontend/src/services/appointmentService.js` (getAvailable, create)
-- [ ] T037 [P] [US1] Tarih seçici bileşenini oluştur: `frontend/src/components/DateSelector.jsx`
-- [ ] T038 [P] [US1] Slot listesi bileşenini oluştur: `frontend/src/components/SlotList.jsx`
-- [ ] T039 [US1] Randevu alma sayfasını oluştur: `frontend/src/pages/RandevuAl.jsx` (doktor+tarih seç, boş slotları listele, seç ve randevu al) — T036, T037, T038'e bağlı
+- [X] T036 [P] [US1] Randevu servisini yaz: `frontend/src/services/appointmentService.js` — `getAvailableSlots(doctorId, date)`, `createAppointment(doctorId, date, timeSlot)`
+- [X] T037 [US1] Tarih seçici: `BookingModal.jsx` içinde `<input type="date" min={today}>` (geçmiş tarih engellenir) — ayrı DateSelector yerine modal içine gömüldü
+- [X] T038 [US1] Slot listesi: `BookingModal.jsx` içinde tıklanabilir slot grid'i (loading/empty/hata durumları) — ayrı SlotList yerine modal içine gömüldü
+- [X] T039 [US1] Randevu alma akışı: `components/BookingModal.jsx` — DoctorModal'daki "Randevu Al" aktif → doktor için tarih seç → boş slotlar grid'de → slota tıkla → `createAppointment` → yeşil başarı mesajı; `Home.jsx` bağlandı. (Ayrı RandevuAl sayfası yerine modal akışı — kullanıcı tercihi.)
+- [X] T039a Demo veri: 2 bölüm (Kardiyoloji, Göz Hastalıkları) + 4 doktor eklendi (geçici script, arayüz testi için DB'de kalıcı).
 
-**Checkpoint 🎯 MVP**: Hasta kayıt/giriş → bölüm/doktor → tarih/slot → randevu alma akışını uçtan uca tamamlayabiliyor.
+**Checkpoint 🎯 MVP**: ✅ Hasta kayıt/giriş → bölüm/doktor → tarih/slot → randevu alma akışını uçtan uca tamamlayabiliyor. Akış testi **5/5** geçti (slot çek, randevu oluştur, slot düşer, aynı gün 2. randevu 409). US1 uçtan uca TAMAM.
 
 ---
 

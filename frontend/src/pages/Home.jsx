@@ -4,6 +4,7 @@ import { LogOut, Loader2, AlertCircle } from "lucide-react";
 import Logo from "../components/Logo";
 import DepartmentCard from "../components/DepartmentCard";
 import DoctorModal from "../components/DoctorModal";
+import BookingModal from "../components/BookingModal";
 import useAuthStore from "../store/authStore";
 import { getDepartments } from "../services/departmentService";
 import { getDoctorsByDepartment } from "../services/doctorService";
@@ -22,6 +23,9 @@ export default function Home() {
   const [doctors, setDoctors] = useState([]);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [doctorsError, setDoctorsError] = useState(null);
+
+  // Randevu alınacak doktor (BookingModal)
+  const [bookingDoctor, setBookingDoctor] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -120,7 +124,16 @@ export default function Home() {
           loading={doctorsLoading}
           error={doctorsError}
           onClose={() => setSelected(null)}
+          onBook={(doctor) => {
+            setSelected(null); // doktor listesini kapat
+            setBookingDoctor(doctor); // randevu modalını aç
+          }}
         />
+      )}
+
+      {/* Randevu alma modalı */}
+      {bookingDoctor && (
+        <BookingModal doctor={bookingDoctor} onClose={() => setBookingDoctor(null)} />
       )}
     </div>
   );
