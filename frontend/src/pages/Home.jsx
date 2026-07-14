@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import DepartmentCard from "../components/DepartmentCard";
 import DoctorModal from "../components/DoctorModal";
 import BookingModal from "../components/BookingModal";
-import useAuthStore from "../store/authStore";
 import { getDepartments } from "../services/departmentService";
 import { getDoctorsByDepartment } from "../services/doctorService";
 
 // Hasta Ana Sayfası — bölümleri listeler; bir bölüme tıklanınca doktorları modalda gösterir.
-// Not: giriş yapılmamışsa /login'e yönlendirir (kalıcı ProtectedRoute Gün 13'te).
+// Erişim güvenliği App.jsx'teki ProtectedRoute ile merkezi olarak sağlanır (Gün 13).
 export default function Home() {
-  const { isAuthenticated } = useAuthStore();
-
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -63,8 +59,6 @@ export default function Home() {
       setDoctorsLoading(false);
     }
   };
-
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <div className="min-h-screen bg-slate-50">

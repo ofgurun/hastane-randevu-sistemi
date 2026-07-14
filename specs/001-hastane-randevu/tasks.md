@@ -229,10 +229,11 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 ## Phase 13: Polish — Gün 13 (Güvenlik — Protected Routes)
 
-- [ ] T047 ProtectedRoute bileşenini oluştur: `frontend/src/router/ProtectedRoute.jsx` (token yoksa Login'e yönlendir; opsiyonel rol kontrolü — doktor sayfası DOKTOR'a)
-- [ ] T048 Korumalı sayfaları sarmala: `frontend/src/router/index.jsx` — Home, RandevuAl, Randevularim, DoktorAjanda için ProtectedRoute uygula
+- [X] T051 ProtectedRoute bileşeni: `frontend/src/components/ProtectedRoute.jsx` (giriş yoksa /login; `allowedRoles` ile rol kontrolü → yanlış rolde kendi ana sayfasına) + `GuestRoute.jsx` (girişliyse login/register'ı engelle, rolüne göre yönlendir)
+- [X] T052 App.jsx rotalarını sarmala: `/` (girişli), `/appointments` (HASTA), `/doctor-dashboard` (DOKTOR), `/login` + `/register` (GuestRoute). Sayfalardaki tekrarlı satır-içi guard'lar kaldırıldı (merkezileştirildi).
+- [X] T053 Değerlendirme (Review) sistemi: `services/reviewService.js` (`createReview`), `components/ReviewModal.jsx` (1-5 yıldız + yorum), `Appointments.jsx` — geçmiş+AKTİF randevuda "İptal Et" yerine "Değerlendir"; başarıda toast + "Değerlendirildi" pasif rozet (409'da da gizlenir)
 
-**Checkpoint**: Yetkisiz erişim engelleniyor (SC-006).
+**Checkpoint**: ✅ Yetkisiz erişim merkezi olarak engelleniyor (SC-006). Değerlendirme arayüzü bağlandı. Gün 13 testi **3/3** geçti; frontend derleniyor.
 
 ---
 

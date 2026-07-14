@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
 import { Loader2, CalendarX2, Clock, User, CheckCircle2, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
-import useAuthStore from "../store/authStore";
 import { getDoctorAppointments } from "../services/appointmentService";
 
 // ISO tarih → "GG.AA.YYYY" (yerel gün)
@@ -15,9 +13,8 @@ function formatDate(iso) {
 }
 
 // Doktor Paneli — kendi randevu ajandası (yalnızca görüntüleme / read-only).
+// Erişim: App.jsx ProtectedRoute allowedRoles={["DOKTOR"]} ile merkezi.
 export default function DoctorDashboard() {
-  const { user, isAuthenticated } = useAuthStore();
-
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -43,10 +40,6 @@ export default function DoctorDashboard() {
       active = false;
     };
   }, []);
-
-  // Erişim güvenliği: giriş yoksa /login, doktor değilse ana sayfaya.
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.role !== "DOKTOR") return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-slate-50">

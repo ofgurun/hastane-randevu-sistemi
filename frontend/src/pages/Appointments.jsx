@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
-import { Loader2, XCircle, CalendarX2, CalendarClock, CheckCircle2 } from "lucide-react";
+import { Loader2, XCircle, CalendarX2, CalendarClock, CheckCircle2, Star } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
-import useAuthStore from "../store/authStore";
+import ReviewModal from "../components/ReviewModal";
 import { getMyAppointments, cancelAppointment } from "../services/appointmentService";
 
 // ISO tarih → "GG.AA.YYYY" (yerel gün)
@@ -14,13 +13,22 @@ function formatDate(iso) {
   return `${day}.${m}.${d.getFullYear()}`;
 }
 
-export default function Appointments() {
-  const { isAuthenticated } = useAuthStore();
+// Randevunun tarih+saati geçmişte mi? (tamamlanmış/görüşülmüş sayılır)
+function isPast(a) {
+  const d = new Date(a.date);
+  const [h, m] = a.timeSlot.split(":").map(Number);
+  d.setHours(h, m, 0, 0);
+  return d.getTime() < Date.now();
+}
 
+// Erişim güvenliği App.jsx ProtectedRoute allowedRoles={["HASTA"]} ile merkezi (Gün 13).
+export default function Appointments() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
+  const [reviewedIds, setReviewedIds] = useState([]);
+  const [reviewing, setReviewing] = useState(null); // değerlendirilen randevu
 
   useEffect(() => {
     let active = true;
@@ -48,7 +56,6 @@ export default function Appointments() {
     setCancelingId(id);
     try {
       await cancelAppointment(id);
-      // Listeyi state üzerinden güncelle: ilgili randevunun durumunu IPTAL yap.
       setItems((prev) => prev.map((a) => (a.id === id ? { ...a, status: "IPTAL" } : a)));
       toast.success("Randevunuz iptal edildi.");
     } catch (err) {
@@ -58,7 +65,7 @@ export default function Appointments() {
     }
   };
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const markReviewed = (id) => setReviewedIds((prev) => [...prev, id]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -66,7 +73,9 @@ export default function Appointments() {
 
       <main className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="text-2xl font-bold text-slate-900">Randevularım</h1>
-        <p className="mt-1 text-slate-500">Randevularınızı görüntüleyin ve aktif olanları iptal edin.</p>
+        <p className="mt-1 text-slate-500">
+          Aktif randevularınızı iptal edin, geçmiş randevularınızı değerlendirin.
+        </p>
 
         {loading && (
           <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
@@ -90,6 +99,8 @@ export default function Appointments() {
           <ul className="mt-6 space-y-3">
             {items.map((a) => {
               const cancelled = a.status !== "AKTIF";
+              const past = isPast(a);
+              const reviewed = reviewedIds.includes(a.id);
               return (
                 <li
                   key={a.id}
@@ -125,7 +136,23 @@ export default function Appointments() {
                       </span>
                     )}
 
-                    {a.status === "AKTIF" && (
+                    {/* AKTİF randevu aksiyonları */}
+                    {a.status === "AKTIF" && reviewed && (
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-500">
+                        <Star className="h-4 w-4 fill-slate-400 text-slate-400" /> Değerlendirildi
+                      </span>
+                    )}
+
+                    {a.status === "AKTIF" && !reviewed && past && (
+                      <button
+                        onClick={() => setReviewing(a)}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      >
+                        <Star className="h-4 w-4" /> Değerlendir
+                      </button>
+                    )}
+
+                    {a.status === "AKTIF" && !reviewed && !past && (
                       <button
                         onClick={() => onCancel(a.id)}
                         disabled={cancelingId === a.id}
@@ -149,6 +176,15 @@ export default function Appointments() {
           </ul>
         )}
       </main>
+
+      {/* Değerlendirme modalı */}
+      {reviewing && (
+        <ReviewModal
+          appointment={reviewing}
+          onClose={() => setReviewing(null)}
+          onReviewed={markReviewed}
+        />
+      )}
     </div>
   );
 }

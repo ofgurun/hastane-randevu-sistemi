@@ -5,20 +5,61 @@ import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Appointments from "./pages/Appointments";
 import DoctorDashboard from "./pages/DoctorDashboard";
+import ProtectedRoute from "./components/ProtectedRoute";
+import GuestRoute from "./components/GuestRoute";
 
-// Gün 6-12: yönlendirme + Login/Register + Ana Sayfa + Randevularım + Doktor Ajandası + toast.
-// Sayfalar içinde oturum/rol kontrolü var (DoctorDashboard yalnızca DOKTOR).
-// Kalıcı ProtectedRoute sarmalayıcısı Gün 13'te eklenecek.
+// Gün 6-13: merkezi güvenlik (ProtectedRoute/GuestRoute) + rol bazlı erişim.
 function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Home />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/doctor-dashboard" element={<DoctorDashboard />} />
+        {/* Yalnızca misafir (giriş yapmamış) */}
+        <Route
+          path="/login"
+          element={
+            <GuestRoute>
+              <Login />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <GuestRoute>
+              <Register />
+            </GuestRoute>
+          }
+        />
+
+        {/* Hasta sayfaları */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["HASTA"]}>
+              <Appointments />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Doktor sayfası */}
+        <Route
+          path="/doctor-dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["DOKTOR"]}>
+              <DoctorDashboard />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Bilinmeyen yollar → /login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
