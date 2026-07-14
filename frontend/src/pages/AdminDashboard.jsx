@@ -1,15 +1,10 @@
-import { Building2, Stethoscope, MailWarning, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
+import DepartmentManagement from "../components/DepartmentManagement";
 import useAuthStore from "../store/authStore";
 
-// Admin Paneli — bu adımda yalnızca giriş + iskelet.
-// Bölüm/doktor yönetimi ve hatırlatma e-postaları sonraki adımlarda eklenecek.
-const upcoming = [
-  { icon: Building2, title: "Bölüm Yönetimi", desc: "Randevu alınabilecek bölümleri ekleyin." },
-  { icon: Stethoscope, title: "Doktor Yönetimi", desc: "Bölümlere doktor tanımlayın." },
-  { icon: MailWarning, title: "Hatırlatma E-postaları", desc: "Randevu öncesi otomatik hatırlatma." },
-];
-
+// Admin Paneli. Adım 2: Bölüm yönetimi.
+// (Doktor yönetimi ve hatırlatma e-postaları sonraki adımlarda eklenecek.)
 export default function AdminDashboard() {
   const { user } = useAuthStore();
 
@@ -30,23 +25,12 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {upcoming.map((f) => (
-            <div
-              key={f.title}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <div className="grid h-12 w-12 place-items-center rounded-xl bg-blue-50 text-blue-600">
-                <f.icon className="h-6 w-6" />
-              </div>
-              <h3 className="mt-4 font-semibold text-slate-900">{f.title}</h3>
-              <p className="mt-1 text-sm text-slate-500">{f.desc}</p>
-              <span className="mt-3 inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-400">
-                Yakında
-              </span>
-            </div>
-          ))}
-        </div>
+        <section className="mt-8">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Bölüm Yönetimi
+          </h2>
+          <DepartmentManagement />
+        </section>
       </main>
     </div>
   );

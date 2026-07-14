@@ -271,8 +271,14 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 **Checkpoint**: ✅ Admin giriş yapıp `/admin`'e ulaşıyor (giriş testi 3/3). Yönetim işlevleri sonraki adımlarda.
 
+## Phase 17: Admin Paneli — Adım 2 (Bölüm Yönetimi)
+
+- [X] T062 Servis: `departmentService.js`'e `createDepartment(data)` (POST /api/departments).
+- [X] T063 UI: `components/DepartmentManagement.jsx` — bölüm ekleme formu (ad + açıklama) + mevcut bölümler tablosu; başarıda toast + liste anında güncellenir (refetch yok); aynı isim → 409 toast.error. `AdminDashboard.jsx`'e bağlandı.
+
+**Checkpoint**: ✅ Admin bölüm ekleyip listeliyor (test 4/4: ekle 201, listede, aynı isim 409, hasta 403).
+
 ### Sonraki adımlar (bekliyor)
-- [ ] Adım 2: Bölüm yönetimi UI (listele + ekle) → `POST /api/departments`.
 - [ ] Adım 3: Doktor yönetimi UI (listele + ekle) → tek adımda DOKTOR kullanıcı + profil (yeni backend ucu gerekir).
 - [ ] Adım 4: Randevu öncesi hatırlatma e-postası (`node-cron` + `sendAppointmentReminder`).
 - [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma.

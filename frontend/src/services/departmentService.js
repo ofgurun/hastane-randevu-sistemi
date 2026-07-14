@@ -5,3 +5,9 @@ export async function getDepartments() {
   const res = await api.get("/departments");
   return res.data.data;
 }
+
+// Yeni bölüm oluşturur (ADMIN) → oluşan bölüm { id, name, description }
+export async function createDepartment(data) {
+  const res = await api.post("/departments", data);
+  return res.data.data;
+}
