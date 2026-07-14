@@ -278,8 +278,15 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 **Checkpoint**: ✅ Admin bölüm ekleyip listeliyor (test 4/4: ekle 201, listede, aynı isim 409, hasta 403).
 
+## Phase 18: Admin Paneli — Adım 3 (Doktor Yönetimi)
+
+- [X] T064 Backend: `POST /api/doctors` yeniden yazıldı — body `{ name, email, password, title, departmentId }`; **Prisma `$transaction`** ile DOKTOR user (bcrypt hash) + Doctor profili atomik oluşturulur; 201; e-posta varsa 409; bölüm yoksa 404; şifre <6 → 400. `contracts/api.md` güncellendi.
+- [X] T065 Servis: `doctorService.js`'e `getAllDoctors()` + `createDoctor(data)`.
+- [X] T066 UI: `components/DoctorManagement.jsx` — sol form (Ad, E-posta, Şifre, Ünvan, Bölüm select) + sağ doktor tablosu (Ad, Ünvan, Bölüm, E-posta); başarıda toast + liste anında güncellenir; hata toast; `AdminDashboard.jsx`'e bağlandı.
+
+**Checkpoint**: ✅ Admin doktor ekliyor; eklenen doktor giriş yapabiliyor (test 8/8, orphan user yok).
+
 ### Sonraki adımlar (bekliyor)
-- [ ] Adım 3: Doktor yönetimi UI (listele + ekle) → tek adımda DOKTOR kullanıcı + profil (yeni backend ucu gerekir).
 - [ ] Adım 4: Randevu öncesi hatırlatma e-postası (`node-cron` + `sendAppointmentReminder`).
 - [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma.
 

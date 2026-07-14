@@ -1,7 +1,8 @@
 // Doctor Controller — doktor CRUD işlemleri
-// Gün 3: GET (tüm doktorlar, include ile ilişkili veriler) ve POST (yeni doktor)
+// GET (tüm doktorlar) ve POST (yeni doktor: DOKTOR user + profil, transaction ile)
 
 const prisma = require("../models/prismaClient");
+const bcrypt = require("bcryptjs");
 
 // ────────────────────────────────────────────
 // GET /api/doctors — Tüm doktorları listele
@@ -51,89 +52,76 @@ const getAllDoctors = async (req, res) => {
 };
 
 // ────────────────────────────────────────────
-// POST /api/doctors — Yeni doktor profili oluştur
-// Body: { userId, departmentId, title }
+// POST /api/doctors — Yeni doktor (DOKTOR user + profil, tek transaction'da)
+// Body: { name, email, password, title, departmentId }
 // ────────────────────────────────────────────
 const createDoctor = async (req, res) => {
   try {
-    const { userId, departmentId, title } = req.body;
+    const { name, email, password, title, departmentId } = req.body;
 
-    if (!userId || !departmentId || !title) {
+    if (!name || !email || !password || !title || !departmentId) {
       return res.status(400).json({
         success: false,
-        message: "userId, departmentId ve title alanları zorunludur.",
+        message: "name, email, password, title ve departmentId zorunludur.",
       });
     }
-
-    // Kullanıcı var mı ve DOKTOR rolünde mi kontrol et
-    const user = await prisma.user.findUnique({
-      where: { id: parseInt(userId, 10) },
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "Belirtilen userId ile kullanıcı bulunamadı.",
-      });
-    }
-
-    if (user.role !== "DOKTOR") {
+    if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        message: "Kullanıcının rolü DOKTOR olmalıdır.",
+        message: "Şifre en az 6 karakter olmalıdır.",
       });
     }
 
-    // Bu kullanıcı için zaten doktor profili var mı
-    const existingDoctor = await prisma.doctor.findUnique({
-      where: { userId: parseInt(userId, 10) },
-    });
-
-    if (existingDoctor) {
-      return res.status(409).json({
-        success: false,
-        message: "Bu kullanıcı için zaten bir doktor profili mevcut.",
-      });
-    }
-
-    // Bölüm var mı kontrol et
+    // Bölüm var mı
     const department = await prisma.department.findUnique({
       where: { id: parseInt(departmentId, 10) },
     });
-
     if (!department) {
       return res.status(404).json({
         success: false,
-        message: "Belirtilen departmentId ile bölüm bulunamadı.",
+        message: "Belirtilen bölüm bulunamadı.",
       });
     }
 
-    const doctor = await prisma.doctor.create({
-      data: {
-        userId: parseInt(userId, 10),
-        departmentId: parseInt(departmentId, 10),
-        title,
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
+    // E-posta zaten kayıtlı mı
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "Bu e-posta zaten kayıtlı.",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Transaction: önce DOKTOR user, sonra doctor profili.
+    const doctor = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name, email, password: hashedPassword, role: "DOKTOR" },
+      });
+      return tx.doctor.create({
+        data: { userId: user.id, departmentId: parseInt(departmentId, 10), title },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          department: { select: { id: true, name: true } },
         },
-        department: {
-          select: { id: true, name: true },
-        },
-      },
+      });
     });
 
     return res.status(201).json({
       success: true,
-      message: "Doktor profili başarıyla oluşturuldu.",
+      message: "Doktor başarıyla eklendi.",
       data: doctor,
     });
   } catch (error) {
+    // Yarış durumunda benzersiz e-posta ihlali
+    if (error.code === "P2002") {
+      return res.status(409).json({ success: false, message: "Bu e-posta zaten kayıtlı." });
+    }
     console.error("Doktor oluşturma hatası:", error);
     return res.status(500).json({
       success: false,
-      message: "Sunucu hatası. Doktor profili oluşturulamadı.",
+      message: "Sunucu hatası. Doktor oluşturulamadı.",
     });
   }
 };

@@ -54,13 +54,13 @@ Doktorları listeler; `departmentId` ile filtrelenebilir.
 - **200**: `{ success, data: [ { id, title, user: { id, name, email }, department: { id, name } } ] }`
 
 ### POST /api/doctors
-Yeni doktor profili oluşturur. **Yalnızca ADMIN.**
+Yeni doktor oluşturur — DOKTOR `User` + `Doctor` profili tek **transaction**'da. **Yalnızca ADMIN.**
 
 - **Auth**: Bearer (ADMIN)
-- **Request**: `{ "userId": number, "departmentId": number, "title": string }`
-- **201**: `{ success, message, data: { doctor } }`
-- **400**: eksik alan / kullanıcı DOKTOR değil · **401**: token yok · **403**: ADMIN değil
-- **404**: user/department yok · **409**: bu kullanıcı için doktor profili zaten var
+- **Request**: `{ "name": string, "email": string, "password": string, "title": string, "departmentId": number }`
+- **201**: `{ success, message, data: { doctor + user{id,name,email} + department{id,name} } }`
+- **400**: eksik alan / şifre < 6 · **401**: token yok · **403**: ADMIN değil
+- **404**: bölüm yok · **409**: e-posta zaten kayıtlı
 
 ## Randevular
 

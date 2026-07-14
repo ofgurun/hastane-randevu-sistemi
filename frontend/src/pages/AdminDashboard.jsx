@@ -1,10 +1,11 @@
 import { ShieldCheck } from "lucide-react";
 import Navbar from "../components/Navbar";
 import DepartmentManagement from "../components/DepartmentManagement";
+import DoctorManagement from "../components/DoctorManagement";
 import useAuthStore from "../store/authStore";
 
-// Admin Paneli. Adım 2: Bölüm yönetimi.
-// (Doktor yönetimi ve hatırlatma e-postaları sonraki adımlarda eklenecek.)
+// Admin Paneli. Adım 2: Bölüm yönetimi · Adım 3: Doktor yönetimi.
+// (Hatırlatma e-postaları sonraki adımda eklenecek.)
 export default function AdminDashboard() {
   const { user } = useAuthStore();
 
@@ -30,6 +31,13 @@ export default function AdminDashboard() {
             Bölüm Yönetimi
           </h2>
           <DepartmentManagement />
+        </section>
+
+        <section className="mt-10">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Doktor Yönetimi
+          </h2>
+          <DoctorManagement />
         </section>
       </main>
     </div>
