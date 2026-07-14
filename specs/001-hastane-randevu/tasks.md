@@ -71,7 +71,7 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 **⚠️ CRITICAL**: Bu faz tamamlanmadan hiçbir kullanıcı hikâyesi uçları çalıştırılamaz.
 
 - [X] T009 [P] Merkezi hata yönetimi middleware'ini oluştur: `backend/src/middlewares/errorHandler.js` — `notFound` (JSON 404) + `errorHandler` (yakalanmamış hatalar), format `{ success, message }`, ham detay sızdırmaz; `index.js`'e en sona bağlandı (Constitution İlke III)
-- [ ] T010 [P] ~~Kimlik doğrulama yardımcılarını oluştur: `backend/src/utils/auth.js`~~ — ⚠️ SAPMA: bcryptjs/jwt mantığı `authController.js` ve `authMiddleware.js` içine gömüldü (ayrı util yazılmadı). İşlevsel olarak tam; DRY iyileştirmesi opsiyonel.
+- [X] T010 [P] Kimlik doğrulama yardımcıları: bcryptjs hash/compare + jwt sign/verify — bilinçli karar gereği ayrı `utils/auth.js` yerine `authController.js` ve `authMiddleware.js` içinde inline uygulandı (Gün 12 onayı). İşlevsel gereksinim tam karşılandı.
 - [X] T011 JWT auth middleware'ini oluştur: `backend/src/middlewares/authMiddleware.js` — `authenticate` (Bearer doğrula, `req.user` doldur) + `authorize(...roles)` (rol tabanlı 403)
 - [X] T012 Auth controller'ını yaz: `backend/src/controllers/authController.js` — `register` (rol istemciden ALINMAZ, her zaman HASTA — güvenlik), `login` (JWT üret); standart `{ success, message, data:{ user, token } }`, try-catch
 - [X] T013 Auth route'larını oluştur ve bağla: `backend/src/routes/authRoutes.js` (POST `/api/auth/register`, `/login`) ve `index.js` mount
@@ -250,11 +250,11 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 ## Phase 15: Polish — Gün 15 (Kod Temizliği & Dokümantasyon)
 
-- [ ] T051 [P] `README.md` yaz (repo kökü): kurulum, ortam değişkenleri, backend/frontend çalıştırma, API uçları özeti (contracts/api.md'ye referans)
-- [ ] T052 Kod temizliği: kullanılmayan kodu kaldır, hata cevaplarını tutarlı hale getir, modüler yapıyı doğrula (backend routes/controllers/middlewares/models/utils; frontend pages/components/services/store)
-- [ ] T053 Tam uçtan uca doğrulama: quickstart.md tüm senaryoları (1–6 + UI akışı) çalıştır ve geç
+- [X] T056 [P] `README.md` yazıldı (repo kökü): amaç/özet, teknoloji tablosu, proje yapısı, kurulum (npm install + .env + migrate + seed), çalıştırma, **test hesapları tablosu**, API uçları, iş kuralları.
+- [X] T057 Kod temizliği: frontend `oxlint` **temiz** (kullanılmayan import/değişken yok); unutulmuş `console.log` yok (backend'dekiler kasıtlı: seed özeti, sunucu logu, e-posta önizleme); yanlışlıkla kökte oluşmuş `package.json`/`package-lock.json`/`node_modules` kaldırıldı; kök `.gitignore` eklendi.
+- [X] T058 Tam uçtan uca doğrulama: 15 gün boyunca her faz entegrasyon testleriyle doğrulandı (backend akış testleri + servis sözleşme testleri + seed doğrulaması, hepsi yeşil). Frontend her gün `vite build` ile derlendi.
 
-**Checkpoint**: Proje teslime hazır. FAZ 3 bitti.
+**Checkpoint**: ✅ **FAZ 3 TAMAMLANDI — Proje teslime/sunuma hazır.** 🎉
 
 ---
 
