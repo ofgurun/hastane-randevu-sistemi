@@ -148,11 +148,12 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Goal (US1)**: Auth durum yönetimi, JWT'nin localStorage'a yazılması ve Axios interceptor.
 
-- [ ] T031 [US1] Zustand auth store'unu oluştur: `frontend/src/store/authStore.js` (token, user, login/logout; JWT localStorage persist)
-- [ ] T032 [US1] Axios instance + request interceptor: `frontend/src/services/api.js` (baseURL, `Authorization: Bearer` başlığını ekle) — T031'e bağlı
-- [ ] T033 [US1] Auth servisi ve sayfa bağlama: `frontend/src/services/authService.js` (register, login) — Login/Register sayfalarını store'a bağla — T031, T032'ye bağlı
+- [X] T031 [US1] Zustand auth store'unu oluştur: `frontend/src/store/authStore.js` (user, token, isAuthenticated, isLoading, error; **persist** middleware; async login/register/logout + clearError)
+- [X] T032 [US1] Axios instance + request interceptor: `frontend/src/services/api.js` (baseURL `http://localhost:5000/api`, `Authorization: Bearer <token>` başlığını localStorage'dan ekler)
+- [X] T033 [US1] Login/Register sayfalarını store'a bağla: `onSubmit` → login/register; loading'de buton disable + "…yapılıyor"; hata kırmızı metin; başarıda `useNavigate("/")`. (Ayrı authService yerine çağrılar doğrudan store'da — modüler ve yeterli.)
+- [X] T033a Geçici korumalı `/` (App.jsx `TempHome`): giriş akışını test etmek için oturum doğrulama + çıkış (Gün 8'de gerçek Ana Sayfa ile değişecek; liste İÇERMEZ).
 
-**Checkpoint**: Giriş yapınca token saklanıyor ve isteklere ekleniyor.
+**Checkpoint**: ✅ Giriş/kayıt çalışıyor — token localStorage'a yazılıyor, interceptor isteklere ekliyor, hata gösteriliyor. Sözleşme testi **7/7** geçti; frontend derleniyor.
 
 ---
 
