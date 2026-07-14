@@ -161,10 +161,11 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Goal (US1)**: Bölümlerin ve doktorların listelenmesi.
 
-- [ ] T034 [P] [US1] Bölüm ve doktor servislerini yaz: `frontend/src/services/departmentService.js`, `frontend/src/services/doctorService.js` (api.js kullanır)
-- [ ] T035 [US1] Ana sayfayı oluştur: `frontend/src/pages/Home.jsx` (bölümleri listele, seçilen bölüme göre doktorları göster) — T034'e bağlı
+- [X] T034 [P] [US1] Bölüm ve doktor servislerini yaz: `frontend/src/services/departmentService.js` (`getDepartments`), `frontend/src/services/doctorService.js` (`getDoctorsByDepartment`) — api.js kullanır
+- [X] T035 [US1] Ana sayfayı oluştur: `frontend/src/pages/Home.jsx` — üst bar (Logo + kullanıcı + çıkış), bölüm grid'i (`components/DepartmentCard.jsx`, lucide ikonları, loading/error/empty durumları), bölüme tıklayınca doktorları modalda gösterir (`components/DoctorModal.jsx`, user.name + title, **pasif "Randevu Al"** butonu — Gün 9)
+- [X] T035a `TempHome` kaldırıldı; `App.jsx` `/` rotası gerçek `Home` sayfasına bağlandı (oturum kontrolü Home içinde).
 
-**Checkpoint**: Hasta bölüm ve doktorları görüntüleyebiliyor.
+**Checkpoint**: ✅ Hasta bölümleri grid'de görüyor, bölüme tıklayınca o bölümün doktorlarını (ad + unvan) modalda görüyor. Servis sözleşme testi **6/6** geçti; frontend derleniyor. (Randevu alma + takvim Gün 9'a bırakıldı.)
 
 ---
 
