@@ -11,3 +11,16 @@ export async function createAppointment(doctorId, date, timeSlot) {
   const res = await api.post("/appointments", { doctorId, date, timeSlot });
   return res.data.data;
 }
+
+// Giriş yapan hastanın kendi AKTİF randevuları
+// → [{ id, date, timeSlot, status, doctor: { title, user:{name}, department:{name} } }]
+export async function getMyAppointments() {
+  const res = await api.get("/appointments/me");
+  return res.data.data;
+}
+
+// Randevuyu iptal eder (status → IPTAL) → { id, status }
+export async function cancelAppointment(id) {
+  const res = await api.delete(`/appointments/${id}`);
+  return res.data.data;
+}

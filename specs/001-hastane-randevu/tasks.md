@@ -189,10 +189,11 @@ Proje sahibi tarafından onaylanan, önceden "Kapsam Dışı" olan yeni gereksin
 
 **Independent Test**: "Randevularım" ekranı yalnızca kendi aktif randevularını gösterir; iptal sonrası slot yeniden boşa çıkar.
 
-- [ ] T040 [US2] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getMine`, `cancel`
-- [ ] T041 [US2] Randevularım sayfasını oluştur: `frontend/src/pages/Randevularim.jsx` (aktif randevuları listele, iptal butonu) — T040'a bağlı
+- [X] T040 [US2] Randevu servisine ekle: `frontend/src/services/appointmentService.js` — `getMyAppointments()` (GET /me), `cancelAppointment(id)` (DELETE /:id)
+- [X] T041 [US2] Randevularım sayfasını oluştur: `frontend/src/pages/Appointments.jsx` — kart listesi (Bölüm, Doktor, Tarih, Saat, Durum rozeti AKTİF/İPTAL); loading + "Henüz randevunuz yok" empty state; AKTİF olanlarda kırmızı "İptal Et" → cancel → yeşil başarı + durum state'te IPTAL'e döner
+- [X] T042 [US2] Routing + navigasyon: `App.jsx`'e `/appointments` rotası; paylaşılan `components/Navbar.jsx` (Ana Sayfa ↔ Randevularım linkleri + çıkış), `Home.jsx` ve `Appointments.jsx`'te kullanılıyor
 
-**Checkpoint**: US1 ve US2 bağımsız olarak çalışıyor. FAZ 2 bitti.
+**Checkpoint**: ✅ **FAZ 2 (Frontend) TAMAMLANDI** — US1 (randevu alma) ve US2 (randevularım/iptal) uçtan uca çalışıyor. Randevularım/iptal testi **6/6** geçti. Not: `/me` yalnızca AKTİF döndürür (FR-017); iptal edilen randevu, oturum içinde IPTAL rozetiyle görünür, sayfa yenilenince (AKTİF-only) listeden düşer.
 
 ---
 

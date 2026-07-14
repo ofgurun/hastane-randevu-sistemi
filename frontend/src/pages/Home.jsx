@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { LogOut, Loader2, AlertCircle } from "lucide-react";
-import Logo from "../components/Logo";
+import { Loader2, AlertCircle } from "lucide-react";
+import Navbar from "../components/Navbar";
 import DepartmentCard from "../components/DepartmentCard";
 import DoctorModal from "../components/DoctorModal";
 import BookingModal from "../components/BookingModal";
@@ -12,7 +12,7 @@ import { getDoctorsByDepartment } from "../services/doctorService";
 // Hasta Ana Sayfası — bölümleri listeler; bir bölüme tıklanınca doktorları modalda gösterir.
 // Not: giriş yapılmamışsa /login'e yönlendirir (kalıcı ProtectedRoute Gün 13'te).
 export default function Home() {
-  const { user, logout, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,23 +65,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Üst bar */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Logo />
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-600 sm:inline">
-              Merhaba, <span className="font-semibold">{user?.name}</span>
-            </span>
-            <button
-              onClick={logout}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
-            >
-              <LogOut className="h-4 w-4" /> Çıkış
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* İçerik */}
       <main className="mx-auto max-w-6xl px-4 py-8">
