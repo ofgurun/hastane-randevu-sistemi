@@ -182,6 +182,15 @@ listelendiği doğrulanabilir.
 - **FR-023**: Sistem, zamanı 24 saatten az kalmış AKTİF randevular için hastaya bir hatırlatma
   e-postası göndermeli ve her randevu için yalnızca bir kez göndermelidir (mükerrer engeli).
   Bu, zamanlanmış bir görevle (cron) yürütülür.
+- **FR-024**: Bir ADMIN, bir doktorun takvimini ay bazında (günlük doluluk oranı ve kapalılık
+  durumuyla) görüntüleyebilmeli; bir günü tamamen veya belirli 30 dk saatleri tek tek randevuya
+  kapatıp yeniden açabilmelidir (toggle). Kapatılan gün/saatler hastaların boş slot listesinden
+  çıkarılır ve bu slotlara randevu talepleri reddedilir; mevcut randevular etkilenmez.
+- **FR-025**: Her doktora aynı bölümden opsiyonel bir **yedek doktor** atanabilir. Bir ADMIN,
+  doktoru bir tarih aralığında izne ayırabilir (aralıktaki günler kapatılır) veya tamamen
+  kaldırabilir. Her iki durumda etkilenen AKTIF randevular otomatik olarak yedek doktora
+  aktarılır; yedek doktor aynı gün+saatte doluysa çakışan randevu IPTAL edilir. Aktif randevusu
+  olup yedeği tanımlı olmayan doktor izne ayrılamaz/kaldırılamaz (409).
 
 ### Key Entities *(include if feature involves data)*
 

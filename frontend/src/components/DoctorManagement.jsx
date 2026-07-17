@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { Plus, Loader2, Stethoscope } from "lucide-react";
+import { Plus, Loader2, Stethoscope, CalendarCog, CalendarOff, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { getAllDoctors, createDoctor } from "../services/doctorService";
 import { getDepartments } from "../services/departmentService";
+import DoctorCalendarModal from "./DoctorCalendarModal";
+import DeleteDoctorModal from "./DeleteDoctorModal";
+import LeaveModal from "./LeaveModal";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const emptyForm = { name: "", email: "", password: "", title: "", departmentId: "" };
+const emptyForm = { name: "", email: "", password: "", title: "", departmentId: "", backupDoctorId: "" };
 
 // Admin — doktor listeleme + ekleme (DOKTOR user + profil tek transaction'da).
 export default function DoctorManagement() {
@@ -15,6 +18,9 @@ export default function DoctorManagement() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [calendarDoctor, setCalendarDoctor] = useState(null); // takvimi açık doktor
+  const [leaveDoctor, setLeaveDoctor] = useState(null); // izne ayrılan doktor
+  const [deletingDoctor, setDeletingDoctor] = useState(null); // silinmek üzere olan doktor
 
   useEffect(() => {
     let active = true;
@@ -64,6 +70,7 @@ export default function DoctorManagement() {
         password: form.password,
         title: form.title.trim(),
         departmentId: Number(form.departmentId),
+        backupDoctorId: form.backupDoctorId ? Number(form.backupDoctorId) : undefined,
       });
       setDoctors((prev) => [...prev, created]); // listeyi anında güncelle
       toast.success("Doktor eklendi.");
@@ -109,11 +116,35 @@ export default function DoctorManagement() {
               </div>
               <div>
                 <label htmlFor="doc-dept" className="mb-1.5 block text-sm font-medium text-slate-700">Bölüm</label>
-                <select id="doc-dept" value={form.departmentId} onChange={setField("departmentId")} className={inputCls}>
+                <select
+                  id="doc-dept"
+                  value={form.departmentId}
+                  onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value, backupDoctorId: "" }))}
+                  className={inputCls}
+                >
                   <option value="">Bölüm seçin…</option>
                   {departments.map((d) => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="doc-backup" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Yedek Doktor <span className="text-slate-400">(aynı bölümden, opsiyonel)</span>
+                </label>
+                <select
+                  id="doc-backup"
+                  value={form.backupDoctorId}
+                  onChange={setField("backupDoctorId")}
+                  disabled={!form.departmentId}
+                  className={`${inputCls} disabled:cursor-not-allowed disabled:bg-slate-50`}
+                >
+                  <option value="">Yedek doktor seçin…</option>
+                  {doctors
+                    .filter((d) => d.department?.id === Number(form.departmentId))
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>{d.user?.name} ({d.title})</option>
+                    ))}
                 </select>
               </div>
 
@@ -164,6 +195,7 @@ export default function DoctorManagement() {
                     <th className="px-5 py-2.5 font-medium">Ünvan</th>
                     <th className="px-5 py-2.5 font-medium">Bölüm</th>
                     <th className="px-5 py-2.5 font-medium">E-posta</th>
+                    <th className="px-5 py-2.5 font-medium">İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,6 +205,28 @@ export default function DoctorManagement() {
                       <td className="px-5 py-3 text-slate-600">{d.title}</td>
                       <td className="px-5 py-3 text-slate-600">{d.department?.name}</td>
                       <td className="px-5 py-3 text-slate-500">{d.user?.email}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => setCalendarDoctor(d)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                          >
+                            <CalendarCog className="h-4 w-4" /> Takvim
+                          </button>
+                          <button
+                            onClick={() => setLeaveDoctor(d)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
+                          >
+                            <CalendarOff className="h-4 w-4" /> İzne Ayır
+                          </button>
+                          <button
+                            onClick={() => setDeletingDoctor(d)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100"
+                          >
+                            <Trash2 className="h-4 w-4" /> Kaldır
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -181,6 +235,23 @@ export default function DoctorManagement() {
           )}
         </div>
       </div>
+
+      {/* Doktor takvim modalı */}
+      {calendarDoctor && (
+        <DoctorCalendarModal doctor={calendarDoctor} onClose={() => setCalendarDoctor(null)} />
+      )}
+
+      {/* İzne ayırma modalı */}
+      {leaveDoctor && <LeaveModal doctor={leaveDoctor} onClose={() => setLeaveDoctor(null)} />}
+
+      {/* Doktor silme modalı */}
+      {deletingDoctor && (
+        <DeleteDoctorModal
+          doctor={deletingDoctor}
+          onClose={() => setDeletingDoctor(null)}
+          onDeleted={(id) => setDoctors((prev) => prev.filter((d) => d.id !== id))}
+        />
+      )}
     </div>
   );
 }

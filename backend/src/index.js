@@ -15,6 +15,7 @@ const departmentRoutes = require("./routes/departmentRoutes");
 const doctorRoutes = require("./routes/doctorRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 // Merkezi hata yönetimi
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
@@ -42,6 +43,7 @@ apiRouter.use("/departments", departmentRoutes);
 apiRouter.use("/doctors", doctorRoutes);
 apiRouter.use("/appointments", appointmentRoutes);
 apiRouter.use("/reviews", reviewRoutes);
+apiRouter.use("/admin", adminRoutes);
 
 app.use("/api", apiRouter);
 

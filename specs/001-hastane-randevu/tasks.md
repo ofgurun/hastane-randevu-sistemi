@@ -296,8 +296,31 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 **🎀 FAZ 4 TAMAMLANDI — tüm proje gereksinimleri (admin ekranı + hatırlatma) karşılandı.**
 
-### Opsiyonel (bekliyor)
-- [ ] Adım 5 (ops.): Randevu saatlerini yapılandırma (global çalışma saatleri / doktora özel).
+## Phase 20: Admin Paneli — Adım 5 (Takvim & Saat Yönetimi — TimeBlock)
+
+- [X] T070 Şema: `TimeBlock` modeli (doctorId, date, timeSlot nullable — null=tüm gün kapalı); migration `add_time_blocks`; seed temizlik sırasına `timeBlock` eklendi.
+- [X] T071 Backend: `scheduleController.js` + `adminRoutes.js` (`/api/admin`, ADMIN korumalı) — GET `doctors/:id/calendar?month=` (gün başına appointmentCount/bookedSlots/blockedSlots/dayClosed), POST `doctors/:id/blocks` (gün/saat **toggle**). `getAvailableSlots` blokları hariç tutuyor; `createAppointment` kapalı gün/saate 409 dönüyor.
+- [X] T072 Frontend: `scheduleService.js`; `DoctorCalendarModal.jsx` — ay grid'i (sağ/sol ay gezinme), gün altı **doluluk renk barı** (yeşil %0-30 / turuncu %31-70 / kırmızı %71+ veya gün kapalı), güne tıklayınca detay: "Günü Komple Kapat/Aç" + 16 saat tek tek toggle (randevulu saatler mavi/kilitli); `DoctorManagement.jsx` tablosuna "Takvim/Saatler" butonu.
+
+**Checkpoint**: ✅ Takvim/saat yönetimi testi **16/16** geçti (gün kapat→slot yok+409, aç→16 slot, saat kapat→liste/409, takvim doluluk yansıması, HASTA 403). **"Randevu alınacak saatleri açmak" gereksinimi de karşılandı — tüm proje gereksinimleri tamam.**
+
+## Phase 21: Admin Paneli — Adım 6 (Yedek Doktor + İzne Ayır + Kaldır)
+
+- [X] T073 Şema: `Doctor.backupDoctorId` (self-relation "DoctorBackup", nullable); migration `add_backup_doctor`; seed'e bölüm-içi karşılıklı yedek atamaları eklendi (mevcut DB'ye non-destructive script ile uygulandı).
+- [X] T074 Backend: `POST /doctors` `backupDoctorId` kabul eder (aynı bölüm doğrulaması); `POST /api/admin/doctors/:id/leave` (günleri TimeBlock ile kapatır + AKTIF randevuları yedeğe aktarır, çakışan→IPTAL); `DELETE /api/admin/doctors/:id` (gelecek AKTIF'leri yedeğe aktarır, sonra review/appointment/block/doctor/user'ı transaction ile siler, backup referanslarını temizler). Yedeksiz+randevulu → 409.
+- [X] T075 Servisler: `doctorService.js`'e `deleteDoctor(id)` + `setDoctorLeave(id, startDate, endDate)`.
+- [X] T076 UI: doktor formuna "Yedek Doktor" select (bölüme göre filtreli); İşlemler sütunu genişletildi — `LeaveModal.jsx` (çift tarih seçici, bitiş<başlangıç engeli, "İzin bitiş tarihi işe dönüş tarihiyle aynıdır…" notu) + `DeleteDoctorModal.jsx` (ONAYLIYORUM yazma zorunluluğu → son uyarı → Evet, Sil / İptal); başarıda toast + liste anında güncellenir.
+
+**Checkpoint**: ✅ Yedek/izin/silme testi **15/15** geçti (yedek bölüm doğrulaması 400, izin→günler kapalı+çakışan IPTAL, silme→randevu aktarımı+user silindi+login 401, yedeksiz 409, HASTA 403).
+
+## Phase 22: Hasta UX — Takvimde Doluluk + Doktor Puanları
+
+- [X] T077 Backend: `GET /api/doctors/:id/availability?month=YYYY-MM` (açık) — gün başına yalnızca sayısal özet `{ date, totalSlots, availableCount, dayClosed }` (dolu saat listesi sızdırılmaz; randevu ∪ kapalı saat birleşimi düşülür).
+- [X] T078 Backend: `GET /api/doctors` (ve `?departmentId=` filtresi — bölüm doktorları da bu uçtan geliyor, ayrı `/departments/:id/doctors` ucu yok) yanıtına `Review` groupBy aggregate ile `averageRating` (1 ondalık, yoksa null) + `reviewCount` eklendi.
+- [X] T079 Frontend: `doctorService.js`'e `getDoctorAvailability(doctorId, month)`; `BookingModal.jsx` yeniden yazıldı — date input yerine **ay grid'i takvim** (ay gezinme, geçmiş aya gidilemez), gün altı doluluk renk barı (yeşil ≤%30 / turuncu %31-70 / kırmızı %71+), **gün kapalı veya tamamen doluysa kırmızı + tıklanamaz**, geçmiş günler pasif; güne tıklayınca mevcut slot akışı; başlıkta doktorun ⭐ puanı.
+- [X] T080 Frontend: `DoctorModal.jsx` doktor kartlarında ⭐ `averageRating / 5 · N Değerlendirme` (yorumsuz doktorda "Henüz değerlendirme yok"). Review akışı (geçmiş AKTIF randevuda Değerlendir → 1-5 yıldız + yorum, 409'da buton gizlenir) doğrulandı.
+
+**Checkpoint**: ✅ Hasta UX testi **17/17** geçti (availability 400/404 doğrulamaları, boş gün 16/16, randevu+saat kapatma→14, gün kapatma→dayClosed+0, review 201/409/gelecek-400, aggregate 4.5/2 ve null/0). Frontend build temiz.
 
 ---
 

@@ -49,15 +49,19 @@ model Department {
 }
 
 model Doctor {
-  id           Int    @id @default(autoincrement())
-  userId       Int    @unique
-  departmentId Int
-  title        String
+  id             Int    @id @default(autoincrement())
+  userId         Int    @unique
+  departmentId   Int
+  title          String
+  backupDoctorId Int? // aynı bölümden yedek doktor (izin/silme durumunda randevular ona aktarılır)
 
   user         User          @relation(fields: [userId], references: [id])
   department   Department    @relation(fields: [departmentId], references: [id])
   appointments Appointment[]
   reviews      Review[]
+  timeBlocks   TimeBlock[]
+  backupDoctor Doctor?       @relation("DoctorBackup", fields: [backupDoctorId], references: [id])
+  backupFor    Doctor[]      @relation("DoctorBackup")
 }
 
 model Appointment {
@@ -78,6 +82,20 @@ model Appointment {
   // Çakışma kontrolü uygulama katmanında yalnızca status = 'AKTIF' kayıtlar
   // üzerinden yapılır; böylece IPTAL satırları slotu bloke etmez (FR-016 / SC-004).
   @@index([patientId])
+  @@index([doctorId, date])
+}
+
+// --- Kapalı Zamanlar (admin takvim yönetimi) ---
+// timeSlot NULL ise o gün komple kapalıdır; doluysa yalnızca o saat kapalıdır.
+model TimeBlock {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  date      DateTime // gün (yerel gün başı)
+  timeSlot  String? // "HH:mm" veya null (tüm gün)
+  createdAt DateTime @default(now())
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
   @@index([doctorId, date])
 }
 

@@ -19,6 +19,7 @@ async function main() {
   // --- 1) Temizlik (FK sırasına göre) ---
   await prisma.review.deleteMany();
   await prisma.appointment.deleteMany();
+  await prisma.timeBlock.deleteMany();
   await prisma.doctor.deleteMany();
   await prisma.department.deleteMany();
   await prisma.user.deleteMany();
@@ -66,6 +67,19 @@ async function main() {
     doc[d.email] = await prisma.doctor.create({
       data: { userId: user.id, departmentId: dept[d.dept].id, title: d.title },
     });
+  }
+
+  // --- 3b) Yedek doktor atamaları (aynı bölümdeki çiftler birbirinin yedeği) ---
+  const backupPairs = [
+    ["ahmet.yilmaz@medirandevu.local", "elif.demir@medirandevu.local"],
+    ["mehmet.kaya@medirandevu.local", "ayse.sahin@medirandevu.local"],
+    ["mustafa.aydin@medirandevu.local", "zeynep.celik@medirandevu.local"],
+    ["can.ozturk@medirandevu.local", "fatma.arslan@medirandevu.local"],
+    ["emre.dogan@medirandevu.local", "selin.koc@medirandevu.local"],
+  ];
+  for (const [a, b] of backupPairs) {
+    await prisma.doctor.update({ where: { id: doc[a].id }, data: { backupDoctorId: doc[b].id } });
+    await prisma.doctor.update({ where: { id: doc[b].id }, data: { backupDoctorId: doc[a].id } });
   }
 
   // --- 4) Hastalar (2) ---

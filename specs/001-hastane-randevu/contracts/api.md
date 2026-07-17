@@ -47,20 +47,52 @@ Yeni bölüm oluşturur. **Yalnızca ADMIN.**
 ## Doktorlar
 
 ### GET /api/doctors
-Doktorları listeler; `departmentId` ile filtrelenebilir.
+Doktorları listeler; `departmentId` ile filtrelenebilir. Her kayıt, `Review` tablosundan
+aggregate edilen **ortalama puanı** ve **değerlendirme sayısını** da içerir.
 
 - **Auth**: Yok (açık)
 - **Query**: `departmentId` (opsiyonel)
-- **200**: `{ success, data: [ { id, title, user: { id, name, email }, department: { id, name } } ] }`
+- **200**: `{ success, data: [ { id, title, user: { id, name, email }, department: { id, name }, averageRating: number|null, reviewCount: number } ] }`
+  - `averageRating`: 1 ondalık yuvarlanmış (ör. 4.5); değerlendirme yoksa `null`, `reviewCount` 0.
+
+### GET /api/doctors/:id/availability?month=YYYY-MM
+Hasta takvimi için aylık **doluluk özeti**. Yalnızca sayısal özet döner — hangi saatlerin
+dolu olduğu bu uçtan sızdırılmaz (saat listesi için `GET /api/appointments/available`).
+
+- **Auth**: Yok (açık)
+- **Query**: `month` (YYYY-MM, zorunlu)
+- **200**: `{ success, data: { month, days: [ { date: "YYYY-MM-DD", totalSlots: 16, availableCount: number, dayClosed: boolean } ] } }`
+  - `availableCount` = toplam slot − (AKTIF randevular ∪ kapalı saatler); gün komple kapalıysa 0.
+- **400**: geçersiz id / month formatı · **404**: doktor yok
 
 ### POST /api/doctors
 Yeni doktor oluşturur — DOKTOR `User` + `Doctor` profili tek **transaction**'da. **Yalnızca ADMIN.**
 
 - **Auth**: Bearer (ADMIN)
-- **Request**: `{ "name": string, "email": string, "password": string, "title": string, "departmentId": number }`
+- **Request**: `{ "name": string, "email": string, "password": string, "title": string, "departmentId": number, "backupDoctorId"?: number }`
+  - `backupDoctorId` opsiyoneldir; verilirse **aynı bölümden** mevcut bir doktor olmalıdır (aksi 400).
 - **201**: `{ success, message, data: { doctor + user{id,name,email} + department{id,name} } }`
-- **400**: eksik alan / şifre < 6 · **401**: token yok · **403**: ADMIN değil
-- **404**: bölüm yok · **409**: e-posta zaten kayıtlı
+- **400**: eksik alan / şifre < 6 / yedek farklı bölümden · **401**: token yok · **403**: ADMIN değil
+- **404**: bölüm/yedek doktor yok · **409**: e-posta zaten kayıtlı
+
+### POST /api/admin/doctors/:id/leave
+Doktoru tarih aralığında izne ayırır. **Yalnızca ADMIN.** Aralıktaki günler tam-gün `TimeBlock`
+ile kapatılır; aralıktaki AKTIF randevular **yedek doktora aktarılır** (yedek o gün+saatte doluysa
+randevu IPTAL edilir).
+
+- **Request**: `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }` (ikisi de dahil)
+- **200**: `{ success, message, data: { startDate, endDate, blockedDays, transferred, cancelled } }`
+- **400**: geçersiz tarih / bitiş < başlangıç · **401/403**: yetki · **404**: doktor yok
+- **409**: aralıkta AKTIF randevu var ama yedek doktor tanımlı değil
+
+### DELETE /api/admin/doctors/:id
+Doktoru tamamen kaldırır. **Yalnızca ADMIN.** Gelecek AKTIF randevular yedek doktora aktarılır
+(çakışanlar IPTAL); ardından doktorun blok/randevu/değerlendirme kayıtları, profili ve kullanıcı
+hesabı **transaction** içinde silinir. Bu doktoru yedek olarak kullananların referansı temizlenir.
+
+- **200**: `{ success, message, data: { id, transferred, cancelled } }`
+- **400**: geçersiz id · **401/403**: yetki · **404**: doktor yok
+- **409**: gelecek AKTIF randevu var ama yedek doktor tanımlı değil
 
 ## Randevular
 
@@ -106,6 +138,26 @@ Giriş yapmış doktorun kendisine atanmış randevuları (tarih+saate göre sı
 - **Auth**: Bearer (DOKTOR)
 - **200**: `{ success, data: [ { id, date, timeSlot, status, patient: { id, name } } ] }`
 - **403**: rol DOKTOR değil
+
+## Admin Takvim Yönetimi (TimeBlock)
+
+### GET /api/admin/doctors/:id/calendar?month=YYYY-MM
+Doktorun ay takvimi: her gün için doluluk ve kapalılık özeti. **Yalnızca ADMIN.**
+
+- **Auth**: Bearer (ADMIN)
+- **200**: `{ success, data: { month, days: [ { date, appointmentCount, bookedSlots, blockedSlots, dayClosed, totalSlots } ] } }`
+- **400**: geçersiz month/id · **401/403**: yetki · **404**: doktor yok
+
+### POST /api/admin/doctors/:id/blocks
+Gün veya saat kapat/aç (**toggle**). `timeSlot` verilmezse tüm gün. **Yalnızca ADMIN.**
+
+- **Auth**: Bearer (ADMIN)
+- **Request**: `{ "date": "YYYY-MM-DD", "timeSlot"?: "HH:mm" }`
+- **201** (kapatıldı) / **200** (açıldı): `{ success, message, data: { blocked, date, timeSlot } }`
+- **400**: geçersiz tarih/slot · **401/403**: yetki · **404**: doktor yok
+
+> Etki: kapatılan gün/saatler `GET /appointments/available` sonuçlarından çıkarılır ve
+> `POST /appointments` bu slotları **409** ile reddeder.
 
 ## Değerlendirmeler (Review)
 

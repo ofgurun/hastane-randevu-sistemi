@@ -1,4 +1,4 @@
-import { X, User, Loader2, CalendarPlus } from "lucide-react";
+import { X, User, Loader2, CalendarPlus, Star } from "lucide-react";
 
 // Seçili bölümün doktorlarını gösteren modal.
 // "Randevu Al" (Gün 9) → onBook(doctor) ile randevu alma akışını açar.
@@ -53,6 +53,15 @@ export default function DoctorModal({ department, doctors, loading, onClose, onB
                     <div>
                       <p className="font-semibold text-slate-900">{d.user?.name}</p>
                       <p className="text-sm text-slate-500">{d.title}</p>
+                      {d.reviewCount > 0 ? (
+                        <p className="mt-0.5 flex items-center gap-1 text-sm">
+                          <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                          <span className="font-semibold text-slate-700">{d.averageRating}</span>
+                          <span className="text-slate-400">/ 5 · {d.reviewCount} Değerlendirme</span>
+                        </p>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-slate-400">Henüz değerlendirme yok</p>
+                      )}
                     </div>
                   </div>
                   <button

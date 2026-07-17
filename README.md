@@ -33,6 +33,8 @@ ve doktor tanımlayabilir.
 - ⭐ **Değerlendirme (Review)**: Geçmiş randevular için 1–5 yıldız + yorum.
 - 👨‍⚕️ **Doktor Paneli**: Doktorun kendi randevu ajandası (salt-okunur).
 - 🛡️ **Admin Paneli**: Bölüm ve doktor yönetimi (doktor kullanıcı + profili tek transaction'da).
+- 🗓️ **Takvim & Saat Yönetimi**: Admin, doktor takvimini aylık doluluk renkleriyle görür; günü veya tek tek saatleri randevuya kapatıp açabilir (TimeBlock).
+- 🔄 **Yedek Doktor Sistemi**: Doktor izne ayrıldığında veya kaldırıldığında aktif randevuları aynı bölümdeki yedek doktoruna otomatik aktarılır (çakışanlar iptal edilir).
 - 📧 **E-posta Bildirimi**: Randevu oluşturma/iptalde bilgilendirme + **randevu öncesi hatırlatma** (node-cron, nodemailer + Ethereal).
 - 🔒 **Merkezi Güvenlik**: `ProtectedRoute` ile rol bazlı sayfa koruması.
 - 🔔 **Toast Bildirimleri** ve anlık form validasyonları.

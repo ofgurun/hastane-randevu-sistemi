@@ -58,16 +58,28 @@ const getAvailableSlots = async (req, res) => {
     const dayEnd = new Date(y, mo - 1, d, 23, 59, 59, 999);
 
     // Yalnızca AKTIF randevular slotu bloke eder (IPTAL edilenler boşa çıkar).
-    const activeAppointments = await prisma.appointment.findMany({
-      where: {
-        doctorId: parsedDoctorId,
-        status: "AKTIF",
-        date: { gte: dayStart, lte: dayEnd },
-      },
-      select: { timeSlot: true },
-    });
+    // Ayrıca admin tarafından kapatılan gün/saatler (TimeBlock) de hariç tutulur.
+    const [activeAppointments, blocks] = await Promise.all([
+      prisma.appointment.findMany({
+        where: {
+          doctorId: parsedDoctorId,
+          status: "AKTIF",
+          date: { gte: dayStart, lte: dayEnd },
+        },
+        select: { timeSlot: true },
+      }),
+      prisma.timeBlock.findMany({
+        where: { doctorId: parsedDoctorId, date: { gte: dayStart, lte: dayEnd } },
+      }),
+    ]);
+
+    // Gün komple kapalıysa (timeSlot null blok) hiç slot dönme.
+    if (blocks.some((b) => b.timeSlot === null)) {
+      return res.status(200).json({ success: true, data: [] });
+    }
 
     const busy = new Set(activeAppointments.map((a) => a.timeSlot));
+    for (const b of blocks) busy.add(b.timeSlot);
 
     // Tüm slotlardan dolu olanları çıkar
     let available = generateSlots().filter((slot) => !busy.has(slot));
@@ -136,6 +148,21 @@ const createAppointment = async (req, res) => {
 
     const dayStart = new Date(y, mo - 1, d, 0, 0, 0, 0);
     const dayEnd = new Date(y, mo - 1, d, 23, 59, 59, 999);
+
+    // Admin tarafından kapatılmış gün/saat kontrolü (TimeBlock)
+    const block = await prisma.timeBlock.findFirst({
+      where: {
+        doctorId: parsedDoctorId,
+        date: { gte: dayStart, lte: dayEnd },
+        OR: [{ timeSlot: null }, { timeSlot }],
+      },
+    });
+    if (block) {
+      return res.status(409).json({
+        success: false,
+        message: block.timeSlot === null ? "Bu tarih randevuya kapatılmıştır." : "Bu saat randevuya kapatılmıştır.",
+      });
+    }
 
     // Slot cidden boş mu? (doktor + gün + slot AKTIF) (FR-013)
     const slotTaken = await prisma.appointment.findFirst({
