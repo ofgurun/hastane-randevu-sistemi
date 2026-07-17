@@ -5,8 +5,8 @@ seçerek 30 dakikalık zaman dilimlerinde randevu alabilir, randevularını yön
 randevularını değerlendirebilir; doktorlar kendi ajandalarını görüntüleyebilir; adminler bölüm
 ve doktor tanımlayabilir.
 
-> MVP seviyesinde, Spec-Driven Development (Spec Kit) yaklaşımıyla 15 iş günlük bir staj
-> projesi olarak geliştirilmiştir.
+> MVP seviyesinde, Spec-Driven Development (Spec Kit) yaklaşımıyla 
+> geliştirilmiştir.
 
 ---
 
