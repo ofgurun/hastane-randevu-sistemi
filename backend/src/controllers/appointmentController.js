@@ -185,16 +185,15 @@ const createAppointment = async (req, res) => {
       data: { patientId, doctorId: parsedDoctorId, date: new Date(y, mo - 1, d), timeSlot, status: "AKTIF" },
     });
 
-    // Onay e-postası (best-effort — hata ana işlemi bozmaz)
-    try {
-      await email.sendAppointmentConfirmation(req.user.email, {
-        doctorName: doctor.user.name,
-        date,
-        timeSlot,
-      });
-    } catch (mailErr) {
+    // Onay e-postası (fire-and-forget — await etmeden arka planda gönderilir,
+    // böylece SMTP zaman aşımı HTTP yanıtını bloke etmez)
+    email.sendAppointmentConfirmation(req.user.email, {
+      doctorName: doctor.user.name,
+      date,
+      timeSlot,
+    }).catch((mailErr) => {
       console.error("Onay e-postası gönderilemedi:", mailErr.message);
-    }
+    });
 
     return res.status(201).json({ success: true, message: "Randevu oluşturuldu.", data: appointment });
   } catch (error) {
@@ -246,16 +245,14 @@ const cancelAppointment = async (req, res) => {
 
     const updated = await prisma.appointment.update({ where: { id }, data: { status: "IPTAL" } });
 
-    // İptal e-postası hastaya (best-effort)
-    try {
-      await email.sendAppointmentCancellation(appointment.patient.email, {
-        doctorName: appointment.doctor.user.name,
-        date: toDateStr(appointment.date),
-        timeSlot: appointment.timeSlot,
-      });
-    } catch (mailErr) {
+    // İptal e-postası hastaya (fire-and-forget — await etmeden arka planda gönderilir)
+    email.sendAppointmentCancellation(appointment.patient.email, {
+      doctorName: appointment.doctor.user.name,
+      date: toDateStr(appointment.date),
+      timeSlot: appointment.timeSlot,
+    }).catch((mailErr) => {
       console.error("İptal e-postası gönderilemedi:", mailErr.message);
-    }
+    });
 
     return res.status(200).json({
       success: true,
