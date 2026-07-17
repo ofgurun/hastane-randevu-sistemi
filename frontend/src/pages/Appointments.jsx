@@ -24,7 +24,6 @@ export default function Appointments() {
   const [loadError, setLoadError] = useState(false);
   const [cancelTarget, setCancelTarget] = useState(null); // onay bekleyen randevu
   const [cancelling, setCancelling] = useState(false);
-  const [reviewedIds, setReviewedIds] = useState([]);
   const [reviewing, setReviewing] = useState(null); // değerlendirilen randevu
 
   const load = async () => {
@@ -114,7 +113,7 @@ export default function Appointments() {
               const d = new Date(a.date);
               const cancelled = a.status === "IPTAL";
               const past = apptStart(a).getTime() < Date.now();
-              const reviewed = reviewedIds.includes(a.id);
+              const reviewed = !!a.review;
               const canCancel = a.status === "AKTIF" && !past;
               const canReview =
                 !cancelled && !reviewed && ((a.status === "AKTIF" && past) || a.status === "TAMAMLANDI");
@@ -207,7 +206,7 @@ export default function Appointments() {
         <ReviewModal
           appointment={reviewing}
           onClose={() => setReviewing(null)}
-          onReviewed={(id) => setReviewedIds((prev) => [...prev, id])}
+          onReviewed={(id) => setItems((prev) => prev.map((a) => a.id === id ? { ...a, review: { id: -1 } } : a))}
         />
       )}
     </div>

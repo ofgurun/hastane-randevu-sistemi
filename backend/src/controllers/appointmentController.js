@@ -337,6 +337,7 @@ const getMyAppointments = async (req, res) => {
             department: { select: { name: true } },
           },
         },
+        review: { select: { id: true } },
       },
       orderBy: [{ date: "desc" }, { timeSlot: "desc" }],
     });
