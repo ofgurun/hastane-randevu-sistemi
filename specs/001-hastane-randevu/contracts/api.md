@@ -65,6 +65,13 @@ dolu olduğu bu uçtan sızdırılmaz (saat listesi için `GET /api/appointments
   - `availableCount` = toplam slot − (AKTIF randevular ∪ kapalı saatler); gün komple kapalıysa 0.
 - **400**: geçersiz id / month formatı · **404**: doktor yok
 
+### GET /api/doctors/me/availability?month=YYYY-MM
+Giriş yapan doktorun kendi aylık doluluk özeti (doktor paneli "Takvimim"). Hesap
+yukarıdaki uçla birebir aynıdır; doktor token'dan çözülür.
+
+- **Auth**: Bearer (DOKTOR)
+- **200**: aynı şema · **400**: month formatı · **401**: token yok · **403**: DOKTOR değil · **404**: doktor profili yok
+
 ### POST /api/doctors
 Yeni doktor oluşturur — DOKTOR `User` + `Doctor` profili tek **transaction**'da. **Yalnızca ADMIN.**
 

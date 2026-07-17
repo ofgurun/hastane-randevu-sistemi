@@ -170,31 +170,10 @@ const createDoctor = async (req, res) => {
   }
 };
 
-// ────────────────────────────────────────────
-// GET /api/doctors/:id/availability?month=YYYY-MM — Hasta takvimi doluluk özeti
-// Her gün için yalnızca sayısal özet döner (hangi saatlerin dolu olduğu sızdırılmaz):
-// { date, totalSlots, availableCount, dayClosed }
-// ────────────────────────────────────────────
-const getDoctorAvailability = async (req, res) => {
-  try {
-    const doctorId = parseInt(req.params.id, 10);
-    const { month } = req.query;
-
-    if (Number.isNaN(doctorId)) {
-      return res.status(400).json({ success: false, message: "Geçersiz doktor id." });
-    }
-    if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "month parametresi YYYY-MM formatında zorunludur." });
-    }
-
-    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
-    if (!doctor) {
-      return res.status(404).json({ success: false, message: "Doktor bulunamadı." });
-    }
-
-    const [y, m] = month.split("-").map(Number);
+// Aylık doluluk özetini hesaplar (hasta takvimi + doktorun kendi takvimi ortak).
+// → { month, days: [{ date, totalSlots, availableCount, dayClosed }] }
+async function buildMonthAvailability(doctorId, month) {
+  const [y, m] = month.split("-").map(Number);
     const monthStart = new Date(y, m - 1, 1, 0, 0, 0, 0);
     const daysInMonth = new Date(y, m, 0).getDate();
     const monthEnd = new Date(y, m - 1, daysInMonth, 23, 59, 59, 999);
@@ -236,9 +215,65 @@ const getDoctorAvailability = async (req, res) => {
       });
     }
 
-    return res.status(200).json({ success: true, data: { month, days } });
+  return { month, days };
+}
+
+const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+
+// ────────────────────────────────────────────
+// GET /api/doctors/:id/availability?month=YYYY-MM — Hasta takvimi doluluk özeti
+// Her gün için yalnızca sayısal özet döner (hangi saatlerin dolu olduğu sızdırılmaz):
+// { date, totalSlots, availableCount, dayClosed }
+// ────────────────────────────────────────────
+const getDoctorAvailability = async (req, res) => {
+  try {
+    const doctorId = parseInt(req.params.id, 10);
+    const { month } = req.query;
+
+    if (Number.isNaN(doctorId)) {
+      return res.status(400).json({ success: false, message: "Geçersiz doktor id." });
+    }
+    if (!month || !MONTH_RE.test(month)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "month parametresi YYYY-MM formatında zorunludur." });
+    }
+
+    const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: "Doktor bulunamadı." });
+    }
+
+    const data = await buildMonthAvailability(doctorId, month);
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error("Doluluk özeti hatası:", error);
+    return res.status(500).json({ success: false, message: "Sunucu hatası. Doluluk bilgisi getirilemedi." });
+  }
+};
+
+// ────────────────────────────────────────────
+// GET /api/doctors/me/availability?month=YYYY-MM — Doktorun kendi doluluk özeti
+// (Doktor paneli "Takvimim" görünümü; aynı hesap, doktor token'dan çözülür.)
+// ────────────────────────────────────────────
+const getMyAvailability = async (req, res) => {
+  try {
+    const { month } = req.query;
+    if (!month || !MONTH_RE.test(month)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "month parametresi YYYY-MM formatında zorunludur." });
+    }
+
+    const doctor = await prisma.doctor.findUnique({ where: { userId: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: "Doktor profili bulunamadı." });
+    }
+
+    const data = await buildMonthAvailability(doctor.id, month);
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Doluluk özeti (me) hatası:", error);
     return res.status(500).json({ success: false, message: "Sunucu hatası. Doluluk bilgisi getirilemedi." });
   }
 };
@@ -366,4 +401,11 @@ const setDoctorLeave = async (req, res) => {
   }
 };
 
-module.exports = { getAllDoctors, createDoctor, deleteDoctor, setDoctorLeave, getDoctorAvailability };
+module.exports = {
+  getAllDoctors,
+  createDoctor,
+  deleteDoctor,
+  setDoctorLeave,
+  getDoctorAvailability,
+  getMyAvailability,
+};

@@ -15,6 +15,12 @@ export async function getDoctorAvailability(doctorId, month) {
   return res.data.data;
 }
 
+// Giriş yapan doktorun kendi aylık doluluk özeti (Takvimim görünümü).
+export async function getMyAvailability(month) {
+  const res = await api.get("/doctors/me/availability", { params: { month } });
+  return res.data.data;
+}
+
 // Tüm doktorlar (admin listesi için).
 export async function getAllDoctors() {
   const res = await api.get("/doctors");

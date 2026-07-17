@@ -7,6 +7,7 @@ const {
   getAllDoctors,
   createDoctor,
   getDoctorAvailability,
+  getMyAvailability,
 } = require("../controllers/doctorController");
 const {
   createLeaveRequest,
@@ -19,6 +20,9 @@ router.post("/me/leave-requests", authenticate, authorize("DOKTOR"), createLeave
 
 // GET  /api/doctors/me/leave-requests — kendi izin taleplerim (yalnızca DOKTOR)
 router.get("/me/leave-requests", authenticate, authorize("DOKTOR"), getMyLeaveRequests);
+
+// GET  /api/doctors/me/availability?month=YYYY-MM — kendi aylık doluluk özetim (yalnızca DOKTOR)
+router.get("/me/availability", authenticate, authorize("DOKTOR"), getMyAvailability);
 
 // GET  /api/doctors — Tüm doktorları getir (opsiyonel ?departmentId filtresi, açık)
 // Dönen kayıtlar averageRating ve reviewCount alanlarını da içerir.
