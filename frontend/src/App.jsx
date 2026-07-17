@@ -13,7 +13,22 @@ import GuestRoute from "./components/GuestRoute";
 function App() {
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: "#fff",
+            color: "#292524",
+            border: "1px solid #e7e5e4",
+            borderRadius: "13px",
+            boxShadow: "0 16px 40px rgba(28,25,23,.18)",
+            fontSize: "13.5px",
+            fontWeight: 600,
+          },
+          success: { iconTheme: { primary: "#059669", secondary: "#ecfdf5" } },
+          error: { iconTheme: { primary: "#dc2626", secondary: "#fef2f2" } },
+        }}
+      />
       <Routes>
         {/* Yalnızca misafir (giriş yapmamış) */}
         <Route

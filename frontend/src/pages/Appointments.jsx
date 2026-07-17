@@ -1,188 +1,213 @@
 import { useEffect, useState } from "react";
-import { Loader2, XCircle, CalendarX2, CalendarClock, CheckCircle2, Star } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2, CalendarX2, Star, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
+import Modal from "../components/Modal";
 import ReviewModal from "../components/ReviewModal";
+import StatusBadge from "../components/StatusBadge";
 import { getMyAppointments, cancelAppointment } from "../services/appointmentService";
+import { MONTHS_ABBR, fmtLong, apptStart } from "../utils/ui";
 
-// ISO tarih → "GG.AA.YYYY" (yerel gün)
-function formatDate(iso) {
-  const d = new Date(iso);
-  const day = String(d.getDate()).padStart(2, "0");
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}.${m}.${d.getFullYear()}`;
+// Duruma göre tarih karosu renkleri
+function dateTileCls(status) {
+  if (status === "TAMAMLANDI") return "bg-emerald-50 border-emerald-100 text-emerald-700";
+  if (status === "IPTAL") return "bg-stone-100 border-stone-200 text-stone-400";
+  return "bg-blue-50 border-blue-100 text-blue-700";
 }
 
-// Randevunun tarih+saati geçmişte mi? (tamamlanmış/görüşülmüş sayılır)
-function isPast(a) {
-  const d = new Date(a.date);
-  const [h, m] = a.timeSlot.split(":").map(Number);
-  d.setHours(h, m, 0, 0);
-  return d.getTime() < Date.now();
-}
-
-// Erişim güvenliği App.jsx ProtectedRoute allowedRoles={["HASTA"]} ile merkezi (Gün 13).
+// Erişim güvenliği App.jsx ProtectedRoute allowedRoles={["HASTA"]} ile merkezi.
 export default function Appointments() {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [cancelingId, setCancelingId] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null); // onay bekleyen randevu
+  const [cancelling, setCancelling] = useState(false);
   const [reviewedIds, setReviewedIds] = useState([]);
   const [reviewing, setReviewing] = useState(null); // değerlendirilen randevu
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        setLoading(true);
-        setLoadError(false);
-        const data = await getMyAppointments();
-        if (active) setItems(data);
-      } catch {
-        if (active) {
-          setLoadError(true);
-          toast.error("Randevular yüklenemedi.");
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const onCancel = async (id) => {
-    setCancelingId(id);
+  const load = async () => {
     try {
-      await cancelAppointment(id);
-      setItems((prev) => prev.map((a) => (a.id === id ? { ...a, status: "IPTAL" } : a)));
-      toast.success("Randevunuz iptal edildi.");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Randevu iptal edilemedi.");
+      setLoading(true);
+      setLoadError(false);
+      const data = await getMyAppointments();
+      setItems(data);
+    } catch {
+      setLoadError(true);
+      toast.error("Randevular yüklenemedi.");
     } finally {
-      setCancelingId(null);
+      setLoading(false);
     }
   };
 
-  const markReviewed = (id) => setReviewedIds((prev) => [...prev, id]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const doCancel = async () => {
+    setCancelling(true);
+    try {
+      await cancelAppointment(cancelTarget.id);
+      setItems((prev) => prev.map((a) => (a.id === cancelTarget.id ? { ...a, status: "IPTAL" } : a)));
+      toast.success("Randevunuz iptal edildi.");
+      setCancelTarget(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Randevu iptal edilemedi.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-stone-100">
       <Navbar />
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-slate-900">Randevularım</h1>
-        <p className="mt-1 text-slate-500">
-          Aktif randevularınızı iptal edin, geçmiş randevularınızı değerlendirin.
-        </p>
+      <main className="mx-auto max-w-[900px] animate-fadeUp px-6 pb-16 pt-8">
+        <h1 className="mb-1 text-[26px] font-extrabold tracking-tight">Randevularım</h1>
+        <p className="mb-[26px] text-[14.5px] text-stone-500">Geçmiş ve gelecek tüm randevularınız.</p>
 
         {loading && (
-          <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
-            <Loader2 className="h-6 w-6 animate-spin" /> Randevular yükleniyor…
+          <div className="flex flex-col gap-3.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-[18px] border border-stone-200 bg-white" />
+            ))}
           </div>
         )}
 
         {!loading && loadError && (
-          <p className="py-20 text-center text-slate-500">Randevular yüklenemedi. Lütfen sayfayı yenileyin.</p>
+          <div className="rounded-[18px] border border-stone-200 bg-white px-5 py-[52px] text-center">
+            <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+              <AlertTriangle className="h-[26px] w-[26px] text-red-600" />
+            </div>
+            <div className="mb-1 text-base font-bold">Randevular yüklenemedi</div>
+            <div className="mb-[18px] text-sm text-stone-500">Bir hata oluştu.</div>
+            <button
+              onClick={load}
+              className="h-[42px] rounded-[10px] bg-teal-600 px-[22px] text-sm font-bold text-white transition hover:bg-teal-700"
+            >
+              Tekrar Dene
+            </button>
+          </div>
         )}
 
         {!loading && !loadError && items.length === 0 && (
-          <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center">
-            <CalendarX2 className="mx-auto h-10 w-10 text-slate-300" />
-            <p className="mt-3 text-slate-500">Henüz randevunuz yok.</p>
-            <p className="mt-1 text-sm text-slate-400">Ana Sayfa'dan yeni bir randevu alabilirsiniz.</p>
+          <div className="rounded-[18px] border border-stone-200 bg-white px-5 py-14 text-center">
+            <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-50">
+              <CalendarX2 className="h-[26px] w-[26px] text-teal-600" />
+            </div>
+            <div className="mb-1 text-base font-bold">Henüz randevunuz yok</div>
+            <div className="mb-[18px] text-sm text-stone-500">Bir bölüm seçerek ilk randevunuzu oluşturun.</div>
+            <button
+              onClick={() => navigate("/")}
+              className="h-11 rounded-[11px] bg-teal-600 px-[22px] text-sm font-bold text-white shadow-[0_5px_14px_rgba(13,148,136,.24)] transition hover:bg-teal-700"
+            >
+              Randevu Al
+            </button>
           </div>
         )}
 
         {!loading && !loadError && items.length > 0 && (
-          <ul className="mt-6 space-y-3">
+          <div className="flex flex-col gap-3.5">
             {items.map((a) => {
-              const cancelled = a.status !== "AKTIF";
-              const past = isPast(a);
+              const d = new Date(a.date);
+              const cancelled = a.status === "IPTAL";
+              const past = apptStart(a).getTime() < Date.now();
               const reviewed = reviewedIds.includes(a.id);
+              const canCancel = a.status === "AKTIF" && !past;
+              const canReview =
+                !cancelled && !reviewed && ((a.status === "AKTIF" && past) || a.status === "TAMAMLANDI");
               return (
-                <li
+                <div
                   key={a.id}
-                  className={`flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
-                    cancelled ? "opacity-70" : ""
-                  }`}
+                  className={`rounded-[18px] border border-stone-200 bg-white px-5 py-[18px] ${cancelled ? "opacity-70" : ""}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-600">
-                      <CalendarClock className="h-5 w-5" />
+                  <div className="flex flex-wrap items-start gap-4">
+                    {/* Tarih karosu */}
+                    <div className={`min-w-[66px] rounded-[14px] border px-3.5 py-2.5 text-center ${dateTileCls(a.status)}`}>
+                      <div className="text-[22px] font-extrabold leading-none">{d.getDate()}</div>
+                      <div className="mt-0.5 text-[11.5px] font-bold uppercase">{MONTHS_ABBR[d.getMonth()]}</div>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">
-                        {a.doctor?.user?.name}
-                        <span className="mx-1.5 font-normal text-slate-300">·</span>
-                        <span className="text-sm font-medium text-slate-500">{a.doctor?.department?.name}</span>
-                      </p>
-                      <p className="text-sm text-slate-500">{a.doctor?.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {formatDate(a.date)} — saat {a.timeSlot}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 sm:flex-col sm:items-end">
-                    {a.status === "AKTIF" ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> AKTİF
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
-                        <XCircle className="h-3.5 w-3.5" /> İPTAL
-                      </span>
-                    )}
-
-                    {/* AKTİF randevu aksiyonları */}
-                    {a.status === "AKTIF" && reviewed && (
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-500">
-                        <Star className="h-4 w-4 fill-slate-400 text-slate-400" /> Değerlendirildi
-                      </span>
-                    )}
-
-                    {a.status === "AKTIF" && !reviewed && past && (
-                      <button
-                        onClick={() => setReviewing(a)}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                      >
-                        <Star className="h-4 w-4" /> Değerlendir
-                      </button>
-                    )}
-
-                    {a.status === "AKTIF" && !reviewed && !past && (
-                      <button
-                        onClick={() => onCancel(a.id)}
-                        disabled={cancelingId === a.id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {cancelingId === a.id ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" /> İptal ediliyor…
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-4 w-4" /> İptal Et
-                          </>
+                    <div className="min-w-[180px] flex-1">
+                      <div className="mb-[5px] flex flex-wrap items-center gap-2">
+                        <StatusBadge status={a.status} />
+                        {reviewed && (
+                          <span className="rounded-[20px] border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11.5px] font-bold text-amber-600">
+                            ★ Değerlendirildi
+                          </span>
                         )}
-                      </button>
-                    )}
+                      </div>
+                      <div className="text-base font-bold tracking-tight">{a.doctor?.user?.name}</div>
+                      <div className="mt-0.5 text-[13px] text-stone-500">
+                        {a.doctor?.department?.name} · {a.timeSlot} · {fmtLong(a.date)}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {canReview && (
+                        <button
+                          onClick={() => setReviewing(a)}
+                          className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-amber-200 bg-amber-50 px-4 text-[13.5px] font-bold text-amber-700 transition hover:bg-amber-100"
+                        >
+                          <Star className="h-4 w-4" /> Değerlendir
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button
+                          onClick={() => setCancelTarget(a)}
+                          className="h-10 rounded-[10px] border border-red-200 bg-white px-4 text-[13.5px] font-bold text-red-600 transition hover:bg-red-50"
+                        >
+                          İptal Et
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
         )}
       </main>
+
+      {/* İptal onay modalı */}
+      {cancelTarget && (
+        <Modal onClose={() => !cancelling && setCancelTarget(null)} maxWidth="max-w-[420px]">
+          <div className="p-7">
+            <div className="mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-[15px] bg-red-50">
+              <AlertTriangle className="h-[26px] w-[26px] text-red-600" />
+            </div>
+            <h3 className="mb-1.5 text-xl font-extrabold">Randevuyu iptal et</h3>
+            <p className="mb-[22px] text-sm leading-relaxed text-stone-500">
+              Bu randevuyu iptal etmek istediğinize emin misiniz? İptal edilen randevu geri alınamaz.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setCancelTarget(null)}
+                disabled={cancelling}
+                className="h-[46px] flex-1 rounded-[11px] border border-stone-200 bg-white text-sm font-bold text-stone-600 transition hover:bg-stone-50 disabled:opacity-60"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={doCancel}
+                disabled={cancelling}
+                className="flex h-[46px] flex-[1.2] items-center justify-center gap-2 rounded-[11px] bg-red-600 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Evet, İptal Et
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Değerlendirme modalı */}
       {reviewing && (
         <ReviewModal
           appointment={reviewing}
           onClose={() => setReviewing(null)}
-          onReviewed={markReviewed}
+          onReviewed={(id) => setReviewedIds((prev) => [...prev, id])}
         />
       )}
     </div>

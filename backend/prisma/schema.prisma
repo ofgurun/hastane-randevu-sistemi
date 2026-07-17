@@ -22,6 +22,13 @@ enum Role {
 enum AppointmentStatus {
   AKTIF
   IPTAL
+  TAMAMLANDI // doktor tarafından "görüşme yapıldı" olarak işaretlendi
+}
+
+enum LeaveRequestStatus {
+  BEKLIYOR
+  ONAYLANDI
+  REDDEDILDI
 }
 
 // --- Modeller ---
@@ -55,13 +62,33 @@ model Doctor {
   title          String
   backupDoctorId Int? // aynı bölümden yedek doktor (izin/silme durumunda randevular ona aktarılır)
 
-  user         User          @relation(fields: [userId], references: [id])
-  department   Department    @relation(fields: [departmentId], references: [id])
-  appointments Appointment[]
-  reviews      Review[]
-  timeBlocks   TimeBlock[]
-  backupDoctor Doctor?       @relation("DoctorBackup", fields: [backupDoctorId], references: [id])
-  backupFor    Doctor[]      @relation("DoctorBackup")
+  user          User           @relation(fields: [userId], references: [id])
+  department    Department     @relation(fields: [departmentId], references: [id])
+  appointments  Appointment[]
+  reviews       Review[]
+  timeBlocks    TimeBlock[]
+  leaveRequests LeaveRequest[]
+  backupDoctor  Doctor?        @relation("DoctorBackup", fields: [backupDoctorId], references: [id])
+  backupFor     Doctor[]       @relation("DoctorBackup")
+}
+
+// --- İzin Talebi (doktor ister, admin onaylar/reddeder) ---
+// Onaylandığında aralıktaki günler TimeBlock ile kapatılır ve AKTIF
+// randevular yedek doktora aktarılır (admin "izne ayır" ile aynı mantık).
+model LeaveRequest {
+  id        Int                @id @default(autoincrement())
+  doctorId  Int
+  startDate DateTime // izin ilk günü (yerel gün başı)
+  endDate   DateTime // izin son günü (dahil)
+  reason    String? // doktorun izin gerekçesi (yeni taleplerde zorunlu, uygulama katmanında doğrulanır)
+  status    LeaveRequestStatus @default(BEKLIYOR)
+  createdAt DateTime           @default(now())
+  decidedAt DateTime? // onay/red zamanı
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+
+  @@index([doctorId])
+  @@index([status])
 }
 
 model Appointment {

@@ -40,3 +40,30 @@ export async function setDoctorLeave(id, startDate, endDate) {
   const res = await api.post(`/admin/doctors/${id}/leave`, { startDate, endDate });
   return res.data.data;
 }
+
+// ── İzin talepleri ──
+
+// İzin talebi oluşturur (DOKTOR) → oluşan talep. reason (açıklama) zorunlu.
+export async function createLeaveRequest(startDate, endDate, reason) {
+  const res = await api.post("/doctors/me/leave-requests", { startDate, endDate, reason });
+  return res.data.data;
+}
+
+// Kendi izin taleplerim (DOKTOR) → [{ id, startDate, endDate, status, createdAt }]
+export async function getMyLeaveRequests() {
+  const res = await api.get("/doctors/me/leave-requests");
+  return res.data.data;
+}
+
+// Tüm izin talepleri (ADMIN, bekleyenler önce) → doctor.user.name + department dahil
+export async function getLeaveRequests() {
+  const res = await api.get("/admin/leave-requests");
+  return res.data.data;
+}
+
+// Talebi karara bağlar (ADMIN): action "approve" | "reject"
+// → onayda { id, status, blockedDays, transferred, cancelled }
+export async function decideLeaveRequest(id, action) {
+  const res = await api.patch(`/admin/leave-requests/${id}`, { action });
+  return res.data.data;
+}

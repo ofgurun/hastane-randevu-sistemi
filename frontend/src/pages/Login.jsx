@@ -1,12 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, LogIn, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import AuthLayout from "../components/AuthLayout";
-import TextField from "../components/TextField";
 import useAuthStore from "../store/authStore";
 import { homePathForRole } from "../utils/roleRedirect";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const inputCls =
+  "h-[46px] w-full rounded-[11px] border border-stone-200 bg-stone-50 px-3.5 text-[14.5px] text-stone-800 outline-none transition focus:border-teal-500";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -31,7 +33,7 @@ export default function Login() {
 
     const ok = await login(email, password);
     if (ok) {
-      toast.success("Giriş başarılı.");
+      toast.success("Giriş başarılı. Hoş geldiniz!");
       // Rol bazlı yönlendirme: admin → panel, doktor → ajanda, hasta → ana sayfa.
       const role = useAuthStore.getState().user?.role;
       navigate(homePathForRole(role));
@@ -42,52 +44,35 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
-        <h1 className="text-2xl font-bold text-slate-900">Tekrar hoş geldiniz</h1>
-        <p className="mt-1 text-sm text-slate-500">Randevularınıza erişmek için giriş yapın.</p>
+      <h2 className="mb-1.5 text-2xl font-extrabold tracking-tight text-stone-800">
+        Tekrar hoş geldiniz
+      </h2>
+      <p className="mb-6 text-sm text-stone-500">Hesabınıza giriş yapın.</p>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
-          <TextField
-            id="email"
-            label="E-posta"
-            type="email"
-            placeholder="ornek@eposta.com"
-            icon={Mail}
-            autoComplete="email"
-          />
-          <TextField
-            id="password"
-            label="Şifre"
-            type="password"
-            placeholder="••••••••"
-            icon={Lock}
-            autoComplete="current-password"
-          />
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-semibold text-stone-600">E-posta</span>
+          <input name="email" type="email" placeholder="ornek@eposta.com" autoComplete="email" className={inputCls} />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-semibold text-stone-600">Şifre</span>
+          <input name="password" type="password" placeholder="••••••••" autoComplete="current-password" className={inputCls} />
+        </label>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" /> Giriş yapılıyor…
-              </>
-            ) : (
-              <>
-                <LogIn className="h-5 w-5" /> Giriş Yap
-              </>
-            )}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          Hesabınız yok mu?{" "}
-          <Link to="/register" className="font-semibold text-blue-700 hover:text-blue-800">
-            Kayıt olun
-          </Link>
-        </p>
-      </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="mt-1 flex h-12 items-center justify-center gap-2 rounded-[11px] bg-teal-600 text-[15px] font-bold text-white shadow-[0_6px_16px_rgba(13,148,136,.28)] transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" /> Giriş yapılıyor…
+            </>
+          ) : (
+            "Giriş Yap"
+          )}
+        </button>
+      </form>
     </AuthLayout>
   );
 }

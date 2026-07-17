@@ -8,6 +8,7 @@ const {
   getAvailableSlots,
   createAppointment,
   cancelAppointment,
+  completeAppointment,
   getMyAppointments,
   getDoctorAgenda,
 } = require("../controllers/appointmentController");
@@ -27,5 +28,8 @@ router.post("/", authenticate, createAppointment);
 
 // DELETE /api/appointments/:id — iptal (sahibi hasta veya ADMIN)
 router.delete("/:id", authenticate, cancelAppointment);
+
+// PATCH /api/appointments/:id/complete — tamamlandı işaretle (randevunun doktoru)
+router.patch("/:id/complete", authenticate, completeAppointment);
 
 module.exports = router;

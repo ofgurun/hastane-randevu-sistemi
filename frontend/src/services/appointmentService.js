@@ -25,6 +25,12 @@ export async function cancelAppointment(id) {
   return res.data.data;
 }
 
+// Randevuyu tamamlandı olarak işaretler (yalnızca randevunun doktoru) → { id, status }
+export async function completeAppointment(id) {
+  const res = await api.patch(`/appointments/${id}/complete`);
+  return res.data.data;
+}
+
 // Giriş yapan doktorun kendi ajandası (AKTİF randevular, tarih+saate sıralı)
 // → [{ id, date, timeSlot, status, patient: { id, name } }]
 export async function getDoctorAppointments() {

@@ -116,6 +116,7 @@ gönderilir (best-effort).
 - **400**: geçersiz slot / geçmiş tarih-saat · **401**: token yok · **404**: doktor yok
 - **409**: slot dolu (doktorda o slot AKTIF) **veya** hastanın o gün zaten bir AKTIF randevusu var
 
+<!-- Not: DELETE /api/appointments/:id yetkisi genişletildi — randevunun doktoru da iptal edebilir. -->
 ### DELETE /api/appointments/:id
 Randevuyu iptal eder (status → IPTAL, satır silinmez). İptalde hastaya bilgi e-postası
 gönderilir (best-effort).
@@ -125,6 +126,41 @@ gönderilir (best-effort).
 - **200**: `{ success, message, data: { id, status: "IPTAL" } }`
 - **400**: randevu zaten IPTAL · **401**: token yok · **403**: sahibi değil ve ADMIN değil
 - **404**: randevu bulunamadı
+
+### PATCH /api/appointments/:id/complete
+Randevuyu **TAMAMLANDI** olarak işaretler. Yalnızca randevunun doktoru; randevu AKTIF
+olmalı ve saati başlamış olmalı (gelecekteki randevu tamamlanamaz).
+
+- **Auth**: Bearer (DOKTOR — randevunun sahibi)
+- **200**: `{ success, message, data: { id, status: "TAMAMLANDI" } }`
+- **400**: geçersiz id / IPTAL / zaten TAMAMLANDI / henüz başlamamış · **403**: DOKTOR değil veya başkasının randevusu · **404**: randevu yok
+- Not: TAMAMLANDI randevu **iptal edilemez** (DELETE → 400) ama hasta tarafından **değerlendirilebilir**.
+
+### POST /api/doctors/me/leave-requests
+Doktor kendine izin talebi oluşturur (admin onayına düşer, izin hemen uygulanmaz).
+
+- **Auth**: Bearer (DOKTOR)
+- **Request**: `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "reason": string }` (tarihler dahil; reason zorunlu, ≤500 karakter, trim'lenir)
+- **201**: `{ success, message, data: { id, doctorId, startDate, endDate, reason, status: "BEKLIYOR", createdAt } }`
+- **400**: format / bitiş<başlangıç / geçmiş tarih / >366 gün / reason eksik veya >500 · **403**: DOKTOR değil
+- **409**: BEKLIYOR **veya ONAYLANDI** taleple çakışma, ya da aralıktaki tüm günler zaten kapalı (admin doğrudan izne ayırmış)
+- Not: listeleme uçları (`GET me/leave-requests`, `GET /admin/leave-requests`) `reason` alanını da döner.
+
+### GET /api/doctors/me/leave-requests
+Doktorun kendi izin talepleri (yeniden eskiye). — **Auth**: Bearer (DOKTOR)
+- **200**: `{ success, data: [ { id, startDate, endDate, status: BEKLIYOR|ONAYLANDI|REDDEDILDI, createdAt, decidedAt } ] }`
+
+### GET /api/admin/leave-requests
+Tüm izin talepleri, bekleyenler önce. — **Auth**: Bearer (ADMIN)
+- **200**: `{ success, data: [ { ..., doctor: { id, title, user{name}, department{name}, backupDoctor{user{name}}|null } } ] }`
+
+### PATCH /api/admin/leave-requests/:id
+Talebi karara bağlar. — **Auth**: Bearer (ADMIN)
+- **Request**: `{ "action": "approve" | "reject" }`
+- **200 (approve)**: izin uygulanır (günler TimeBlock ile kapatılır + AKTIF randevular yedeğe aktarılır) → `{ data: { id, status: "ONAYLANDI", blockedDays, transferred, cancelled } }`
+- **200 (reject)**: `{ data: { id, status: "REDDEDILDI" } }`
+- **400**: geçersiz action / zaten karara bağlanmış · **404**: talep yok
+- **409 (approve)**: aralıkta AKTIF randevu var ama yedek doktor tanımsız — talep BEKLIYOR kalır
 
 ### GET /api/appointments/me
 Giriş yapmış hastanın tüm randevuları (AKTIF + IPTAL), tarihe göre yeniden eskiye sıralı.

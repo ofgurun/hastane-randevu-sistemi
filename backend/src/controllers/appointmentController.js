@@ -227,12 +227,21 @@ const cancelAppointment = async (req, res) => {
 
     const isOwner = appointment.patientId === req.user.id;
     const isAdmin = req.user.role === "ADMIN";
-    if (!isOwner && !isAdmin) {
+    // Randevunun doktoru da kendi ajandasından iptal edebilir
+    let isDoctorOwner = false;
+    if (!isOwner && !isAdmin && req.user.role === "DOKTOR") {
+      const doc = await prisma.doctor.findUnique({ where: { userId: req.user.id } });
+      isDoctorOwner = !!doc && doc.id === appointment.doctorId;
+    }
+    if (!isOwner && !isAdmin && !isDoctorOwner) {
       return res.status(403).json({ success: false, message: "Bu randevuyu iptal etme yetkiniz yok." });
     }
 
     if (appointment.status === "IPTAL") {
       return res.status(400).json({ success: false, message: "Randevu zaten iptal edilmiş." });
+    }
+    if (appointment.status === "TAMAMLANDI") {
+      return res.status(400).json({ success: false, message: "Tamamlanmış bir randevu iptal edilemez." });
     }
 
     const updated = await prisma.appointment.update({ where: { id }, data: { status: "IPTAL" } });
@@ -256,6 +265,60 @@ const cancelAppointment = async (req, res) => {
   } catch (error) {
     console.error("Randevu iptal hatası:", error);
     return res.status(500).json({ success: false, message: "Sunucu hatası. Randevu iptal edilemedi." });
+  }
+};
+
+// ────────────────────────────────────────────
+// PATCH /api/appointments/:id/complete — Randevuyu tamamlandı işaretle
+// Yalnızca randevunun doktoru. Randevu AKTIF olmalı ve saati başlamış olmalı
+// (gelecekteki bir randevu tamamlandı işaretlenemez).
+// ────────────────────────────────────────────
+const completeAppointment = async (req, res) => {
+  try {
+    if (req.user.role !== "DOKTOR") {
+      return res.status(403).json({ success: false, message: "Bu işlem yalnızca doktorlar içindir." });
+    }
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ success: false, message: "Geçersiz randevu id." });
+    }
+
+    const doctor = await prisma.doctor.findUnique({ where: { userId: req.user.id } });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: "Doktor profili bulunamadı." });
+    }
+
+    const appointment = await prisma.appointment.findUnique({ where: { id } });
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Randevu bulunamadı." });
+    }
+    if (appointment.doctorId !== doctor.id) {
+      return res.status(403).json({ success: false, message: "Yalnızca kendi randevunuzu tamamlandı işaretleyebilirsiniz." });
+    }
+    if (appointment.status === "IPTAL") {
+      return res.status(400).json({ success: false, message: "İptal edilmiş bir randevu tamamlandı işaretlenemez." });
+    }
+    if (appointment.status === "TAMAMLANDI") {
+      return res.status(400).json({ success: false, message: "Randevu zaten tamamlandı olarak işaretli." });
+    }
+
+    // Randevu saati başlamadan tamamlandı işaretlenemez
+    const slotMin = slotToMinutes(appointment.timeSlot);
+    const startTime = new Date(appointment.date);
+    startTime.setHours(Math.floor(slotMin / 60), slotMin % 60, 0, 0);
+    if (startTime > new Date()) {
+      return res.status(400).json({ success: false, message: "Henüz başlamamış bir randevu tamamlandı işaretlenemez." });
+    }
+
+    const updated = await prisma.appointment.update({ where: { id }, data: { status: "TAMAMLANDI" } });
+    return res.status(200).json({
+      success: true,
+      message: "Randevu tamamlandı olarak işaretlendi.",
+      data: { id: updated.id, status: updated.status },
+    });
+  } catch (error) {
+    console.error("Randevu tamamlama hatası:", error);
+    return res.status(500).json({ success: false, message: "Sunucu hatası. Randevu işaretlenemedi." });
   }
 };
 
@@ -317,6 +380,7 @@ module.exports = {
   getAvailableSlots,
   createAppointment,
   cancelAppointment,
+  completeAppointment,
   getMyAppointments,
   getDoctorAgenda,
 };

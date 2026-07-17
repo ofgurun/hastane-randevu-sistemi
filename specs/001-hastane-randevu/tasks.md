@@ -322,6 +322,41 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 **Checkpoint**: ✅ Hasta UX testi **17/17** geçti (availability 400/404 doğrulamaları, boş gün 16/16, randevu+saat kapatma→14, gün kapatma→dayClosed+0, review 201/409/gelecek-400, aggregate 4.5/2 ve null/0). Frontend build temiz.
 
+## Phase 23: Doktor Ajandası TAMAMLANDI Durumu + Admin Tablo Sayfalama
+
+- [X] T081 Şema: `AppointmentStatus` enum'una `TAMAMLANDI` eklendi; migration `add_tamamlandi_status`.
+- [X] T082 Backend: `PATCH /api/appointments/:id/complete` — yalnızca randevunun doktoru, AKTIF + saati başlamış randevu (gelecek→400, IPTAL→400, tekrar→400, başka doktor/HASTA→403). `cancelAppointment` TAMAMLANDI'yı iptal ettirmez (400); review TAMAMLANDI için açık kalır.
+- [X] T083 Frontend `DoctorDashboard.jsx`: durum rozetleri — AKTİF (mavi), **TARİHİ GEÇTİ** (amber: AKTIF + başlangıç+2 saat geçmiş, işaretlenmemiş), TAMAMLANDI (yeşil), İPTAL (gri); başlamış AKTIF randevuda "Tamamlandı" butonu (anında state güncelleme + toast). Hasta `Appointments.jsx`: TAMAMLANDI rozeti, tamamlanan randevu değerlendirilebilir.
+- [X] T084 Frontend `DoctorManagement.jsx`: Mevcut Doktorlar tablosuna **sayfalama** (sayfa başına 7; Önceki/Sonraki + "X–Y / N doktor"; silmede sayfa taşarsa otomatik geri çekilir). Ayrıca panel genişletildi (`max-w-7xl`, xl'de tablo 3/4 pay) — yatay kaydırma kalktı.
+
+**Checkpoint**: ✅ Complete testi **10/10** geçti (403 yetki ×2, 400 kural ×3, 200 işaretleme, iptal engeli, TAMAMLANDI review 201, ajanda yansıması). Frontend build temiz.
+
+## Phase 24: Doktor İşlem Menüsü + İzin Talebi Akışı
+
+- [X] T085 Şema: `LeaveRequest` modeli (doctorId, startDate, endDate, status BEKLIYOR/ONAYLANDI/REDDEDILDI, decidedAt); migration `add_leave_requests`. `deleteDoctor` temizliğine leaveRequest eklendi.
+- [X] T086 Backend: izin mantığı `utils/leave.js`'e çıkarıldı (`applyLeave` + `transferAppointments`) — admin "izne ayır" ve talep onayı aynı yardımcıyı kullanır. `cancelAppointment` yetkisi genişletildi: randevunun **doktoru** da iptal edebilir.
+- [X] T087 Backend: `POST/GET /api/doctors/me/leave-requests` (DOKTOR; geçmiş tarih/366 gün/çakışan bekleyen talep doğrulamaları), `GET /api/admin/leave-requests` (bekleyenler önce, doktor+yedek bilgisiyle), `PATCH /api/admin/leave-requests/:id` (`approve`→izin uygulanır, yedeksiz+randevulu→409 ve talep BEKLIYOR kalır; `reject`).
+- [X] T088 Frontend `DoctorDashboard.jsx`: "Tamamlandı" butonu yerine **"İşlem Yap"** dropdown — Tamamlandı (saati gelmemişse pasif) + Sil/İptal Et (iki adımlı "Emin misiniz?" onayı); başlıkta **"İzin Talep Et"** butonu → `LeaveRequestModal.jsx` (çift tarih seçici); "İzin Taleplerim" listesi (BEKLİYOR/ONAYLANDI/REDDEDİLDİ rozetleri).
+- [X] T089 Frontend admin: `LeaveRequestManagement.jsx` — talepler listesi (doktor, bölüm, aralık, yedek doktor bilgisi), bekleyenlerde **Onayla/Reddet**; onayda kapatılan gün + aktarım istatistikli toast. `AdminDashboard.jsx`'e "İzin Talepleri" bölümü eklendi.
+
+**Checkpoint**: ✅ İzin talebi testi **19/19** geçti (doktor iptali 200/403, talep doğrulamaları 400×2+403, 201+çakışma 409, admin liste+403, onay→ONAYLANDI+randevu yedeğe aktarım+gün kapalı, tekrar karar 400, yedeksiz onay 409→talep BEKLIYOR, red 200). Frontend build temiz.
+
+## Phase 25: Frontend Redesign (Claude Design prototipi entegrasyonu)
+
+- [X] T090 Tasarım sistemi: Plus Jakarta Sans + teal/stone paleti (`index.html`, `tailwind.config.js`, `index.css`); ortak yapı taşları `utils/ui.js` (formatlayıcılar, karo paleti, initials), `Modal.jsx` (animasyonlu kabuk), `StatusBadge.jsx` (tek renk semantiği); özel toast stili.
+- [X] T091 Auth: `AuthLayout` split-screen (teal gradyan tanıtım paneli + Giriş/Kayıt segmenti); `Login`/`Register` yeni form dili.
+- [X] T092 Hasta: `Home` üç görünümlü akış — hero + bölüm kartları (karo renkleri, doktor sayısı) → tam sayfa doktor listesi (⭐ yıldız dizisi) → `BookingView` (nokta göstergeli takvim + 16 slot ızgarası + **randevu onay modalı**, başarıda Randevularım'a yönlendirme). `Appointments`: tarih karolu kartlar + iptal onay modalı; `ReviewModal`: yıldız etiketleri (Kötü→Mükemmel).
+- [X] T093 Doktor: ajanda kartları (saat | hasta | rozet | İşlem Yap menüsü), iptal onay modalı, İzin Taleplerim yan paneli, `LeaveRequestModal` yeni tasarım.
+- [X] T094 Admin: **sekmeli panel** (Bölümler / Doktorlar / Takvim / İzin Talepleri + bekleyen rozeti) — veriler panelde tek seferde yüklenip sekmelere dağıtılır; doktor tablosu (Yedek sütunu + ikon aksiyonlar + 7'li sayfalama), Takvim sekmesi (`AdminCalendar` — doktor seçici, tablodan "Takvim" ile ön-seçim), `LeaveModal`/`DeleteDoctorModal` yeni tasarım. Eski `BookingModal/DoctorModal/DoctorCalendarModal/DepartmentCard/TextField/Logo` bileşenleri kaldırıldı.
+
+**Checkpoint**: ✅ `npm run build` + `oxlint` temiz; tüm akışlar mevcut backend uçlarını değiştirmeden kullanıyor.
+
+## Phase 26: Küçük İyileştirmeler
+
+- [X] T095 Admin Takvim sekmesi: bugünden önceki günler pasif (tıklanamaz, soluk, doluluk barı gizli).
+- [X] T096 İzin talebine **açıklama (reason)**: `LeaveRequest.reason` (migration `add_leave_request_reason`); create ucunda zorunlu + ≤500 karakter doğrulaması; doktor formunda textarea; açıklama hem doktorun "İzin Taleplerim" listesinde hem admin talep kartında görünür. Test **6/6** geçti (eksik/boş/501 karakter → 400, trim, iki listede de alan mevcut).
+- [X] T097 İzin **çakışma korumaları**: yeni talep, BEKLIYOR **veya ONAYLANDI** taleple çakışıyorsa ya da aralıktaki tüm günler zaten kapalıysa (admin doğrudan izne ayırdıysa) 409; admin onayı da aynı iki korumayla 409 döner (talep BEKLIYOR kalır, red mümkün). Kısmi kapalı aralıkta talep serbest (kalan günler için). Test **11/11** geçti.
+
 ---
 
 ## Dependencies & Execution Order

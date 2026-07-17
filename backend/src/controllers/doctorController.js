@@ -4,6 +4,7 @@
 const prisma = require("../models/prismaClient");
 const bcrypt = require("bcryptjs");
 const { generateSlots } = require("../utils/slots");
+const { transferAppointments, applyLeave } = require("../utils/leave");
 
 // ────────────────────────────────────────────
 // GET /api/doctors — Tüm doktorları listele
@@ -242,35 +243,6 @@ const getDoctorAvailability = async (req, res) => {
   }
 };
 
-// Randevuları yedek doktora aktarır (tx içinde). Yedek doktor aynı gün+slotta
-// doluysa randevu aktarılamaz → IPTAL edilir. { transferred, cancelled } döner.
-async function transferAppointments(tx, appointments, backupId) {
-  let transferred = 0;
-  let cancelled = 0;
-  for (const a of appointments) {
-    const dayStart = new Date(a.date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(a.date);
-    dayEnd.setHours(23, 59, 59, 999);
-    const conflict = await tx.appointment.findFirst({
-      where: {
-        doctorId: backupId,
-        status: "AKTIF",
-        timeSlot: a.timeSlot,
-        date: { gte: dayStart, lte: dayEnd },
-      },
-    });
-    if (conflict) {
-      await tx.appointment.update({ where: { id: a.id }, data: { status: "IPTAL" } });
-      cancelled++;
-    } else {
-      await tx.appointment.update({ where: { id: a.id }, data: { doctorId: backupId } });
-      transferred++;
-    }
-  }
-  return { transferred, cancelled };
-}
-
 // ────────────────────────────────────────────
 // DELETE /api/admin/doctors/:id — Doktoru tamamen kaldır (ADMIN)
 // Gelecek AKTIF randevular yedek doktora aktarılır; ardından doktor,
@@ -312,6 +284,7 @@ const deleteDoctor = async (req, res) => {
       await tx.review.deleteMany({ where: { doctorId: id } });
       await tx.appointment.deleteMany({ where: { doctorId: id } });
       await tx.timeBlock.deleteMany({ where: { doctorId: id } });
+      await tx.leaveRequest.deleteMany({ where: { doctorId: id } });
       // Bu doktoru yedek olarak kullananların referansını kaldır
       await tx.doctor.updateMany({ where: { backupDoctorId: id }, data: { backupDoctorId: null } });
       await tx.doctor.delete({ where: { id } });
@@ -370,43 +343,11 @@ const setDoctorLeave = async (req, res) => {
       return res.status(404).json({ success: false, message: "Doktor bulunamadı." });
     }
 
-    const rangeEnd = new Date(ey, em - 1, ed, 23, 59, 59, 999);
-    const activeInRange = await prisma.appointment.findMany({
-      where: { doctorId: id, status: "AKTIF", date: { gte: start, lte: rangeEnd } },
-    });
-
-    if (activeInRange.length > 0 && !doctor.backupDoctorId) {
-      return res.status(409).json({
-        success: false,
-        message:
-          "İzin aralığında aktif randevular var ancak yedek doktor tanımlı değil. Önce randevuları iptal edin.",
-      });
+    // Ortak izin mantığı (izin talebi onayı da aynı yardımcıyı kullanır)
+    const result = await applyLeave(doctor, startDate, endDate);
+    if (!result.ok) {
+      return res.status(409).json({ success: false, message: result.message });
     }
-
-    // Aralıkta zaten kapalı (tüm gün) olan günleri atla
-    const existingBlocks = await prisma.timeBlock.findMany({
-      where: { doctorId: id, timeSlot: null, date: { gte: start, lte: rangeEnd } },
-    });
-    const existingDays = new Set(existingBlocks.map((b) => new Date(b.date).toDateString()));
-
-    const newBlocks = [];
-    for (let i = 0; i < dayCount; i++) {
-      const day = new Date(sy, sm - 1, sd + i);
-      if (!existingDays.has(day.toDateString())) {
-        newBlocks.push({ doctorId: id, date: day, timeSlot: null });
-      }
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      if (newBlocks.length > 0) {
-        await tx.timeBlock.createMany({ data: newBlocks });
-      }
-      let stats = { transferred: 0, cancelled: 0 };
-      if (activeInRange.length > 0) {
-        stats = await transferAppointments(tx, activeInRange, doctor.backupDoctorId);
-      }
-      return stats;
-    });
 
     return res.status(200).json({
       success: true,
@@ -414,7 +355,7 @@ const setDoctorLeave = async (req, res) => {
       data: {
         startDate,
         endDate,
-        blockedDays: dayCount,
+        blockedDays: result.blockedDays,
         transferred: result.transferred,
         cancelled: result.cancelled,
       },

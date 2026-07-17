@@ -1,48 +1,33 @@
-import { useEffect, useState } from "react";
-import { Plus, Loader2, Stethoscope, CalendarCog, CalendarOff, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Loader2, CalendarDays, CalendarOff, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import toast from "react-hot-toast";
-import { getAllDoctors, createDoctor } from "../services/doctorService";
-import { getDepartments } from "../services/departmentService";
-import DoctorCalendarModal from "./DoctorCalendarModal";
+import { createDoctor } from "../services/doctorService";
 import DeleteDoctorModal from "./DeleteDoctorModal";
 import LeaveModal from "./LeaveModal";
+import { initials } from "../utils/ui";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const emptyForm = { name: "", email: "", password: "", title: "", departmentId: "", backupDoctorId: "" };
+const PAGE_SIZE = 7; // tabloda sayfa başına doktor sayısı
 
-// Admin — doktor listeleme + ekleme (DOKTOR user + profil tek transaction'da).
-export default function DoctorManagement() {
-  const [doctors, setDoctors] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
+const inputCls =
+  "h-[42px] w-full rounded-[10px] border border-stone-200 bg-stone-50 px-3 text-[13.5px] text-stone-800 outline-none transition focus:border-teal-500 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-400";
+
+// Admin — Doktorlar sekmesi: solda ekleme formu, sağda tablo (7'li sayfalama).
+export default function DoctorManagement({ doctors, departments, onCreated, onDeleted, onOpenCalendar }) {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
-  const [calendarDoctor, setCalendarDoctor] = useState(null); // takvimi açık doktor
-  const [leaveDoctor, setLeaveDoctor] = useState(null); // izne ayrılan doktor
-  const [deletingDoctor, setDeletingDoctor] = useState(null); // silinmek üzere olan doktor
-
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const [docs, deps] = await Promise.all([getAllDoctors(), getDepartments()]);
-        if (active) {
-          setDoctors(docs);
-          setDepartments(deps);
-        }
-      } catch {
-        if (active) toast.error("Doktorlar/bölümler yüklenemedi.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [leaveDoctor, setLeaveDoctor] = useState(null);
+  const [deletingDoctor, setDeletingDoctor] = useState(null);
+  const [page, setPage] = useState(1);
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  // Sayfalama: silme sonrası sayfa taşarsa son sayfaya çek
+  const totalPages = Math.max(1, Math.ceil(doctors.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageDoctors = doctors.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const doctorById = (id) => doctors.find((d) => d.id === id);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -50,7 +35,7 @@ export default function DoctorManagement() {
     const email = form.email.trim();
 
     if (!name || !email || !form.password || !form.title.trim() || !form.departmentId) {
-      toast.error("Lütfen tüm alanları doldurun.");
+      toast.error("Lütfen tüm zorunlu alanları doldurun.");
       return;
     }
     if (!EMAIL_RE.test(email)) {
@@ -72,8 +57,8 @@ export default function DoctorManagement() {
         departmentId: Number(form.departmentId),
         backupDoctorId: form.backupDoctorId ? Number(form.backupDoctorId) : undefined,
       });
-      setDoctors((prev) => [...prev, created]); // listeyi anında güncelle
-      toast.success("Doktor eklendi.");
+      onCreated(created);
+      toast.success(`${created.user?.name || name} sisteme eklendi.`);
       setForm(emptyForm);
     } catch (err) {
       toast.error(err.response?.data?.message || "Doktor eklenemedi.");
@@ -82,164 +67,170 @@ export default function DoctorManagement() {
     }
   };
 
-  const inputCls =
-    "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-900 placeholder-slate-400 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30";
+  const iconBtn =
+    "flex h-[34px] w-[34px] items-center justify-center rounded-[9px] border transition";
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="grid items-start gap-[22px] lg:grid-cols-[360px_1fr]">
       {/* Ekleme formu */}
-      <div className="lg:col-span-1">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900">Yeni Doktor Ekle</h2>
-
-          {!loading && departments.length === 0 ? (
-            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-              Önce en az bir bölüm eklemelisiniz.
-            </p>
-          ) : (
-            <form onSubmit={onSubmit} className="mt-4 space-y-3">
-              <div>
-                <label htmlFor="doc-name" className="mb-1.5 block text-sm font-medium text-slate-700">Ad Soyad</label>
-                <input id="doc-name" type="text" value={form.name} onChange={setField("name")} placeholder="Dr. Adı Soyadı" className={inputCls} />
-              </div>
-              <div>
-                <label htmlFor="doc-email" className="mb-1.5 block text-sm font-medium text-slate-700">E-posta</label>
-                <input id="doc-email" type="email" value={form.email} onChange={setField("email")} placeholder="ornek@eposta.com" className={inputCls} />
-              </div>
-              <div>
-                <label htmlFor="doc-pass" className="mb-1.5 block text-sm font-medium text-slate-700">Şifre</label>
-                <input id="doc-pass" type="password" value={form.password} onChange={setField("password")} placeholder="En az 6 karakter" className={inputCls} />
-              </div>
-              <div>
-                <label htmlFor="doc-title" className="mb-1.5 block text-sm font-medium text-slate-700">Ünvan</label>
-                <input id="doc-title" type="text" value={form.title} onChange={setField("title")} placeholder="Örn: Uzm. Dr." className={inputCls} />
-              </div>
-              <div>
-                <label htmlFor="doc-dept" className="mb-1.5 block text-sm font-medium text-slate-700">Bölüm</label>
-                <select
-                  id="doc-dept"
-                  value={form.departmentId}
-                  onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value, backupDoctorId: "" }))}
-                  className={inputCls}
-                >
-                  <option value="">Bölüm seçin…</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label htmlFor="doc-backup" className="mb-1.5 block text-sm font-medium text-slate-700">
-                  Yedek Doktor <span className="text-slate-400">(aynı bölümden, opsiyonel)</span>
-                </label>
-                <select
-                  id="doc-backup"
-                  value={form.backupDoctorId}
-                  onChange={setField("backupDoctorId")}
-                  disabled={!form.departmentId}
-                  className={`${inputCls} disabled:cursor-not-allowed disabled:bg-slate-50`}
-                >
-                  <option value="">Yedek doktor seçin…</option>
-                  {doctors
-                    .filter((d) => d.department?.id === Number(form.departmentId))
-                    .map((d) => (
-                      <option key={d.id} value={d.id}>{d.user?.name} ({d.title})</option>
-                    ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:cursor-not-allowed disabled:opacity-60"
+      <div className="rounded-[20px] border border-stone-200 bg-white p-[22px]">
+        <h2 className="mb-4 text-base font-extrabold">Yeni Doktor Ekle</h2>
+        {departments.length === 0 ? (
+          <p className="rounded-[11px] border border-amber-200 bg-amber-50 px-3.5 py-3 text-[13px] text-amber-800">
+            Önce en az bir bölüm eklemelisiniz.
+          </p>
+        ) : (
+          <form onSubmit={onSubmit} className="flex flex-col gap-[13px]">
+            <label className="block">
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">Ad Soyad</span>
+              <input value={form.name} onChange={setField("name")} placeholder="Dr. Ad Soyad" className={inputCls} />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">E-posta</span>
+              <input value={form.email} onChange={setField("email")} type="email" placeholder="doktor@medirandevu.com" className={inputCls} />
+            </label>
+            <div className="grid grid-cols-2 gap-2.5">
+              <label className="block">
+                <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">Şifre</span>
+                <input value={form.password} onChange={setField("password")} type="password" placeholder="••••••" className={inputCls} />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">Ünvan</span>
+                <input value={form.title} onChange={setField("title")} placeholder="Uzm. Dr." className={inputCls} />
+              </label>
+            </div>
+            <label className="block">
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">Bölüm</span>
+              <select
+                value={form.departmentId}
+                onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value, backupDoctorId: "" }))}
+                className={inputCls}
               >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" /> Ekleniyor…
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-5 w-5" /> Doktor Ekle
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+                <option value="">Bölüm seçin</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[12.5px] font-semibold text-stone-600">
+                Yedek Doktor <span className="font-medium text-stone-400">(opsiyonel · aynı bölüm)</span>
+              </span>
+              <select
+                value={form.backupDoctorId}
+                onChange={setField("backupDoctorId")}
+                disabled={!form.departmentId}
+                className={inputCls}
+              >
+                <option value="">{form.departmentId ? "Yedek doktor seçin" : "Önce bölüm seçin"}</option>
+                {doctors
+                  .filter((d) => d.department?.id === Number(form.departmentId))
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>{d.title} {d.user?.name}</option>
+                  ))}
+              </select>
+            </label>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-0.5 flex h-11 items-center justify-center gap-2 rounded-[11px] bg-teal-600 text-sm font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Doktor Ekle
+            </button>
+          </form>
+        )}
       </div>
 
-      {/* Mevcut doktorlar */}
-      <div className="lg:col-span-2">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-3">
-            <h2 className="font-semibold text-slate-900">
-              Mevcut Doktorlar {!loading && <span className="text-slate-400">({doctors.length})</span>}
-            </h2>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
-              <Loader2 className="h-5 w-5 animate-spin" /> Yükleniyor…
-            </div>
-          ) : doctors.length === 0 ? (
-            <div className="py-16 text-center text-slate-500">
-              <Stethoscope className="mx-auto h-9 w-9 text-slate-300" />
-              <p className="mt-2">Henüz doktor yok. Soldaki formdan ekleyin.</p>
+      {/* Doktor tablosu */}
+      <div>
+        <div className="mb-3.5 flex items-center gap-2.5">
+          <h2 className="text-base font-extrabold">Doktorlar</h2>
+          <span className="text-[12.5px] font-semibold text-stone-400">{doctors.length} doktor</span>
+        </div>
+        <div className="overflow-hidden rounded-[18px] border border-stone-200 bg-white">
+          {doctors.length === 0 ? (
+            <div className="px-5 py-12 text-center">
+              <div className="mb-1 text-[15px] font-bold">Henüz doktor yok</div>
+              <div className="text-[13.5px] text-stone-500">Soldaki formdan ekleyin.</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-left text-slate-500">
-                  <tr>
-                    <th className="px-5 py-2.5 font-medium">Ad</th>
-                    <th className="px-5 py-2.5 font-medium">Ünvan</th>
-                    <th className="px-5 py-2.5 font-medium">Bölüm</th>
-                    <th className="px-5 py-2.5 font-medium">E-posta</th>
-                    <th className="px-5 py-2.5 font-medium">İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {doctors.map((d) => (
-                    <tr key={d.id} className="border-t border-slate-100">
-                      <td className="px-5 py-3 font-medium text-slate-900">{d.user?.name}</td>
-                      <td className="px-5 py-3 text-slate-600">{d.title}</td>
-                      <td className="px-5 py-3 text-slate-600">{d.department?.name}</td>
-                      <td className="px-5 py-3 text-slate-500">{d.user?.email}</td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => setCalendarDoctor(d)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
-                          >
-                            <CalendarCog className="h-4 w-4" /> Takvim
-                          </button>
-                          <button
-                            onClick={() => setLeaveDoctor(d)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
-                          >
-                            <CalendarOff className="h-4 w-4" /> İzne Ayır
-                          </button>
-                          <button
-                            onClick={() => setDeletingDoctor(d)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100"
-                          >
-                            <Trash2 className="h-4 w-4" /> Kaldır
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="grid grid-cols-[2fr_1.4fr_1fr_auto] gap-3 border-b border-stone-200 bg-stone-50 px-5 py-[13px] text-[11.5px] font-bold uppercase tracking-[.04em] text-stone-400">
+                <span>Doktor</span>
+                <span>Bölüm</span>
+                <span>Yedek</span>
+                <span className="text-right">İşlemler</span>
+              </div>
+              {pageDoctors.map((d) => {
+                const backup = d.backupDoctorId ? doctorById(d.backupDoctorId) : null;
+                return (
+                  <div
+                    key={d.id}
+                    className="grid grid-cols-[2fr_1.4fr_1fr_auto] items-center gap-3 border-b border-stone-100 px-5 py-3.5"
+                  >
+                    <div className="flex items-center gap-[11px]">
+                      <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px] border border-teal-100 bg-teal-50 text-[13px] font-extrabold text-teal-700">
+                        {initials(d.user?.name)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold">{d.user?.name}</div>
+                        <div className="text-[11.5px] text-stone-400">{d.title}</div>
+                      </div>
+                    </div>
+                    <div className="text-[13px] text-stone-600">{d.department?.name}</div>
+                    <div className="text-[12.5px] text-stone-500">{backup?.user?.name || "—"}</div>
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        onClick={() => onOpenCalendar(d.id)}
+                        title="Takvim"
+                        className={`${iconBtn} border-stone-200 bg-stone-50 text-teal-600 hover:bg-teal-50`}
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setLeaveDoctor(d)}
+                        title="İzne Ayır"
+                        className={`${iconBtn} border-stone-200 bg-stone-50 text-amber-700 hover:bg-amber-50`}
+                      >
+                        <CalendarOff className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingDoctor(d)}
+                        title="Kaldır"
+                        className={`${iconBtn} border-red-200 bg-white text-red-600 hover:bg-red-50`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Sayfalama */}
+              <div className="flex items-center justify-between px-5 py-[13px]">
+                <span className="text-[13px] font-semibold text-stone-500">
+                  {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, doctors.length)} / {doctors.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(safePage - 1)}
+                    disabled={safePage === 1}
+                    className="inline-flex h-[38px] items-center gap-1 rounded-[9px] border border-stone-200 bg-stone-50 px-4 text-[13px] font-bold text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-300"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Önceki
+                  </button>
+                  <button
+                    onClick={() => setPage(safePage + 1)}
+                    disabled={safePage === totalPages}
+                    className="inline-flex h-[38px] items-center gap-1 rounded-[9px] border border-stone-200 bg-stone-50 px-4 text-[13px] font-bold text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:bg-stone-100 disabled:text-stone-300"
+                  >
+                    Sonraki <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </div>
-
-      {/* Doktor takvim modalı */}
-      {calendarDoctor && (
-        <DoctorCalendarModal doctor={calendarDoctor} onClose={() => setCalendarDoctor(null)} />
-      )}
 
       {/* İzne ayırma modalı */}
       {leaveDoctor && <LeaveModal doctor={leaveDoctor} onClose={() => setLeaveDoctor(null)} />}
@@ -249,7 +240,7 @@ export default function DoctorManagement() {
         <DeleteDoctorModal
           doctor={deletingDoctor}
           onClose={() => setDeletingDoctor(null)}
-          onDeleted={(id) => setDoctors((prev) => prev.filter((d) => d.id !== id))}
+          onDeleted={onDeleted}
         />
       )}
     </div>

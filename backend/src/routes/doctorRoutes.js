@@ -8,7 +8,17 @@ const {
   createDoctor,
   getDoctorAvailability,
 } = require("../controllers/doctorController");
+const {
+  createLeaveRequest,
+  getMyLeaveRequests,
+} = require("../controllers/leaveRequestController");
 const { authenticate, authorize } = require("../middlewares/authMiddleware");
+
+// POST /api/doctors/me/leave-requests — izin talebi oluştur (yalnızca DOKTOR)
+router.post("/me/leave-requests", authenticate, authorize("DOKTOR"), createLeaveRequest);
+
+// GET  /api/doctors/me/leave-requests — kendi izin taleplerim (yalnızca DOKTOR)
+router.get("/me/leave-requests", authenticate, authorize("DOKTOR"), getMyLeaveRequests);
 
 // GET  /api/doctors — Tüm doktorları getir (opsiyonel ?departmentId filtresi, açık)
 // Dönen kayıtlar averageRating ve reviewCount alanlarını da içerir.
