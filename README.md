@@ -151,14 +151,14 @@ npm install
 İki ayrı terminalde:
 
 ```bash
-# Terminal 1 — Backend (http://localhost:5000)
+# Terminal 1 — Backend
 cd backend && npm run dev
 
-# Terminal 2 — Frontend (http://localhost:5173)
+# Terminal 2 — Frontend
 cd frontend && npm run dev
 ```
 
-Tarayıcıda **http://localhost:5173** adresini açın.
+Tarayıcıda localhost adresini açın.
 
 ---
 
