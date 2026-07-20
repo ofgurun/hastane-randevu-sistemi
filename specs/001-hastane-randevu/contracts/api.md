@@ -28,6 +28,41 @@ Kimlik doğrular ve JWT döner.
 - **400**: eksik alan
 - **401**: geçersiz kimlik ("E-posta veya şifre hatalı.")
 
+### GET /api/auth/me
+Giriş yapan kullanıcının profili (şifre asla dönmez).
+
+- **Auth**: Bearer
+- **200**: `{ success, data: { id, name, email, role, phone, birthDate, gender, address } }` (profil alanları null olabilir)
+
+### PATCH /api/auth/profile
+Ad + kişisel bilgileri günceller.
+
+- **Auth**: Bearer
+- **Request**: `{ "name": string, "phone"?, "birthDate"? (YYYY-MM-DD), "gender"? ("KADIN"|"ERKEK"|"BELIRTILMEMIS"), "address"? }`
+- **200**: `{ success, message, data: <profil> }` · **400**: boş ad / geçersiz cinsiyet / geçersiz tarih
+
+### PATCH /api/auth/password
+Mevcut şifre doğrulamasıyla şifre değiştirir.
+
+- **Auth**: Bearer
+- **Request**: `{ "currentPassword": string, "newPassword": string }` (yeni ≥6, mevcuttan farklı)
+- **200**: `{ success, message }` · **400**: kısa/aynı şifre · **401**: mevcut şifre hatalı
+
+### POST /api/auth/forgot-password
+Şifre sıfırlama bağlantısı e-postası gönderir. **Güvenlik:** e-posta kayıtlı olsun olmasın
+aynı yanıt döner (kullanıcı sızdırılmaz). Kayıtlıysa tek kullanımlık, 1 saat geçerli token üretilir.
+
+- **Auth**: Yok
+- **Request**: `{ "email": string }`
+- **200**: `{ success: true, message }` (generic) · **400**: geçersiz e-posta formatı
+
+### POST /api/auth/reset-password
+Token ile yeni şifre belirler (tek kullanımlık; süresi dolmuş/kullanılmış token reddedilir).
+
+- **Auth**: Yok
+- **Request**: `{ "token": string, "newPassword": string }` (≥6)
+- **200**: `{ success, message }` · **400**: eksik/kısa şifre, geçersiz/süresi dolmuş/kullanılmış token
+
 ## Bölümler
 
 ### GET /api/departments
@@ -43,6 +78,15 @@ Yeni bölüm oluşturur. **Yalnızca ADMIN.**
 - **Request**: `{ "name": string, "description"?: string }`
 - **201**: `{ success, message, data: { id, name, description } }`
 - **400**: `name` eksik · **401**: token yok · **403**: ADMIN değil · **409**: aynı isimde bölüm var
+
+### GET /api/departments/availability-summary
+Her bölüm için önümüzdeki **30 gündeki** toplam boş slot sayısı ve **en yakın boş slot**
+(hasta ana sayfasındaki bölüm kartları için). AKTIF randevular ve kapalı zamanlar düşülür;
+bugün için geçmiş saatler hariç.
+
+- **Auth**: Yok (açık)
+- **200**: `{ success, data: [ { id, availableCount: number, nextSlot: { date: "YYYY-MM-DD", time: "HH:mm" } | null } ] }`
+  - `availableCount` 0 ise (veya doktoru yoksa) `nextSlot` null → kart "Uygun randevu bulunamadı" gösterir.
 
 ## Doktorlar
 

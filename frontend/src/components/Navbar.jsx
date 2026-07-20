@@ -68,13 +68,21 @@ export default function Navbar() {
         <Brand />
         <nav className="ml-3 hidden items-center gap-1 sm:flex">{links}</nav>
         <div className="ml-auto flex items-center gap-3">
-          <div className="hidden text-right leading-tight sm:block">
-            <div className="text-[13.5px] font-bold text-stone-800">{user?.name}</div>
+          <Link to="/profil" className="hidden text-right leading-tight sm:block">
+            <div className="text-[13.5px] font-bold text-stone-800 transition hover:text-teal-700">{user?.name}</div>
             <div className="text-[11px] font-semibold text-stone-400">{ROLE_LABELS[role] || ""}</div>
-          </div>
-          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-teal-100 bg-teal-50 text-sm font-bold text-teal-700">
+          </Link>
+          <Link
+            to="/profil"
+            title="Profilim"
+            className={`flex h-[38px] w-[38px] items-center justify-center rounded-full border text-sm font-bold transition ${
+              pathname === "/profil"
+                ? "border-teal-300 bg-teal-100 text-teal-700 ring-2 ring-teal-500/30"
+                : "border-teal-100 bg-teal-50 text-teal-700 hover:bg-teal-100"
+            }`}
+          >
             {initials(user?.name)}
-          </div>
+          </Link>
           <button
             onClick={logout}
             title="Çıkış"

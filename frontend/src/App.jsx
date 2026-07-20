@@ -2,7 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
+import Profile from "./pages/Profile";
 import Appointments from "./pages/Appointments";
 import DoctorDashboard from "./pages/DoctorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -47,6 +50,22 @@ function App() {
             </GuestRoute>
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            <GuestRoute>
+              <ForgotPassword />
+            </GuestRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <GuestRoute>
+              <ResetPassword />
+            </GuestRoute>
+          }
+        />
 
         {/* Hasta sayfaları */}
         <Route
@@ -62,6 +81,16 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["HASTA"]}>
               <Appointments />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profil — tüm giriş yapmış roller */}
+        <Route
+          path="/profil"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

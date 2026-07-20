@@ -16,10 +16,11 @@ function getTransporter() {
     return null;
   }
 
+  const port = Number(EMAIL_PORT) || 587;
   transporter = nodemailer.createTransport({
     host: EMAIL_HOST,
-    port: Number(EMAIL_PORT) || 587,
-    secure: false, // Ethereal 587 → STARTTLS
+    port,
+    secure: port === 465, // 465 → SSL (Gmail), 587 → STARTTLS (Ethereal)
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
   });
   return transporter;
@@ -64,4 +65,19 @@ async function sendReminderEmail(to, patientName, doctorName, date, timeSlot) {
   );
 }
 
-module.exports = { sendAppointmentConfirmation, sendAppointmentCancellation, sendReminderEmail };
+async function sendPasswordReset(to, patientName, resetUrl) {
+  return sendMail(
+    to,
+    "Şifre Sıfırlama Talebi",
+    `Sayın ${patientName},\n\nHesabınız için bir şifre sıfırlama talebinde bulunuldu. ` +
+      `Yeni şifrenizi belirlemek için aşağıdaki bağlantıya tıklayın (1 saat geçerlidir):\n\n${resetUrl}\n\n` +
+      `Bu talebi siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\nHastane Randevu Sistemi`
+  );
+}
+
+module.exports = {
+  sendAppointmentConfirmation,
+  sendAppointmentCancellation,
+  sendReminderEmail,
+  sendPasswordReset,
+};

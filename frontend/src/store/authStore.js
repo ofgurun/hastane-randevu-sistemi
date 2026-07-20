@@ -46,6 +46,10 @@ const useAuthStore = create(
         }
       },
 
+      // Profil güncellemesi sonrası store'daki kullanıcıyı tazeler (navbar adı vb.).
+      updateUser: (patch) =>
+        set((state) => ({ user: state.user ? { ...state.user, ...patch } : state.user })),
+
       // Çıkış — durumu ve token'ı temizler.
       logout: () => {
         localStorage.removeItem("token");

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import AuthLayout from "../components/AuthLayout";
@@ -55,7 +55,12 @@ export default function Login() {
           <input name="email" type="email" placeholder="ornek@eposta.com" autoComplete="email" className={inputCls} />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-[13px] font-semibold text-stone-600">Şifre</span>
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="text-[13px] font-semibold text-stone-600">Şifre</span>
+            <Link to="/forgot-password" className="text-[12.5px] font-semibold text-teal-600 hover:text-teal-700">
+              Şifremi unuttum?
+            </Link>
+          </div>
           <input name="password" type="password" placeholder="••••••••" autoComplete="current-password" className={inputCls} />
         </label>
 

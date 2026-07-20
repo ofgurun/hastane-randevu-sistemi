@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarPlus, AlertTriangle, CalendarX2 } from "lucide-react";
+import { ChevronLeft, CalendarPlus, AlertTriangle, CalendarX2, BellOff } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import BookingView from "../components/BookingView";
-import { getDepartments } from "../services/departmentService";
+import { getDepartments, getDepartmentAvailabilitySummary } from "../services/departmentService";
 import { getAllDoctors } from "../services/doctorService";
 import useAuthStore from "../store/authStore";
-import { deptAbbr, tileColor, initials } from "../utils/ui";
+import { deptAbbr, tileColor, initials, MONTHS } from "../utils/ui";
+import { deptVisual } from "../utils/deptVisual";
+
+// "YYYY-MM-DD" → { day, month } (rozet için)
+function slotBadgeParts(nextSlot) {
+  const [y, m, d] = nextSlot.date.split("-").map(Number);
+  return { day: d, month: MONTHS[m - 1], time: nextSlot.time, year: y };
+}
 
 // Yıldız dizisi: 4.5 → ★★★★★ içinde dolu kısım
 function Stars({ rating }) {
@@ -22,13 +29,9 @@ function Stars({ rating }) {
 // Yükleme iskeleti — bölüm kartları
 function DeptSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-[130px] rounded-[18px] border border-stone-200 bg-white p-5">
-          <div className="h-[46px] w-[46px] rounded-[13px] bg-stone-100" />
-          <div className="mt-4 h-3.5 w-3/5 rounded-md bg-stone-100" />
-          <div className="mt-2.5 h-[11px] w-4/5 rounded-md bg-stone-50" />
-        </div>
+        <div key={i} className="h-[104px] animate-pulse rounded-[18px] bg-stone-200" />
       ))}
     </div>
   );
@@ -40,6 +43,7 @@ export default function Home() {
   const { user } = useAuthStore();
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]); // tüm doktorlar (puanlarla)
+  const [summary, setSummary] = useState({}); // deptId → { availableCount, nextSlot }
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -51,9 +55,14 @@ export default function Home() {
     try {
       setLoading(true);
       setLoadError(false);
-      const [deps, docs] = await Promise.all([getDepartments(), getAllDoctors()]);
+      const [deps, docs, sum] = await Promise.all([
+        getDepartments(),
+        getAllDoctors(),
+        getDepartmentAvailabilitySummary().catch(() => []), // özet başarısız olsa da sayfa açılsın
+      ]);
       setDepartments(deps);
       setDoctors(docs);
+      setSummary(Object.fromEntries(sum.map((s) => [s.id, s])));
     } catch {
       setLoadError(true);
       toast.error("Bölümler yüklenemedi.");
@@ -215,10 +224,13 @@ export default function Home() {
         )}
 
         {!loading && !loadError && departments.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {departments.map((dept, i) => {
-              const tc = tileColor(i);
-              const count = doctors.filter((d) => d.department?.id === dept.id).length;
+              const { Icon, gradient } = deptVisual(dept.name, i);
+              const s = summary[dept.id];
+              const count = s?.availableCount ?? 0;
+              const nextSlot = s?.nextSlot || null;
+              const badge = nextSlot ? slotBadgeParts(nextSlot) : null;
               return (
                 <button
                   key={dept.id}
@@ -226,18 +238,41 @@ export default function Home() {
                     setSelectedDept(dept);
                     setView("doctors");
                   }}
-                  className="group flex flex-col rounded-[18px] border border-stone-200 bg-white p-5 text-left transition duration-150 hover:-translate-y-[3px] hover:border-teal-100 hover:shadow-[0_12px_28px_rgba(13,148,136,.12)]"
+                  className={`group relative flex items-center gap-4 overflow-hidden rounded-[18px] bg-gradient-to-br ${gradient} p-5 text-left text-white shadow-sm transition duration-150 hover:-translate-y-[3px] hover:shadow-[0_14px_30px_rgba(0,0,0,.18)]`}
                 >
-                  <div className={`mb-3.5 flex h-[46px] w-[46px] items-center justify-center rounded-[13px] text-base font-extrabold ${tc.bg} ${tc.text}`}>
-                    {deptAbbr(dept.name)}
+                  {/* Dekoratif halka */}
+                  <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-white/10" />
+
+                  {/* İkon */}
+                  <div className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-[14px] bg-white/20 backdrop-blur-sm">
+                    <Icon className="h-7 w-7" strokeWidth={2} />
                   </div>
-                  <div className="mb-[5px] text-base font-bold tracking-tight">{dept.name}</div>
-                  <div className="mb-3.5 text-[13px] leading-normal text-stone-500">
-                    {dept.description || "—"}
+
+                  {/* Metin */}
+                  <div className="relative min-w-0 flex-1">
+                    <div className="truncate text-[18px] font-extrabold tracking-tight">{dept.name}</div>
+                    {count > 0 ? (
+                      <div className="mt-0.5 text-[13.5px] text-white/85">
+                        Uygun randevu sayısı: <span className="font-bold text-white">{count}</span>
+                      </div>
+                    ) : (
+                      <div className="mt-0.5 text-[13.5px] text-white/80">Uygun randevu bulunamadı.</div>
+                    )}
                   </div>
-                  <div className="mt-auto flex items-center gap-1.5 text-[12.5px] font-bold text-teal-600">
-                    {count} doktor
-                    <ChevronRight className="h-[15px] w-[15px] transition group-hover:translate-x-0.5" />
+
+                  {/* Sağ rozet: en yakın slot ya da çan-kapalı */}
+                  <div className="relative shrink-0">
+                    {badge ? (
+                      <div className="rounded-[12px] bg-black/25 px-3 py-2 text-center leading-tight backdrop-blur-sm">
+                        <div className="text-[20px] font-extrabold">{badge.day}</div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-white/80">{badge.month}</div>
+                        <div className="mt-0.5 text-[12px] font-bold">{badge.time}</div>
+                      </div>
+                    ) : (
+                      <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-black/20 backdrop-blur-sm">
+                        <BellOff className="h-5 w-5 text-white/80" />
+                      </div>
+                    )}
                   </div>
                 </button>
               );

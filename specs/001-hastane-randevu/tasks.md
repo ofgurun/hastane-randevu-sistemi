@@ -355,6 +355,16 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 - [X] T095 Admin Takvim sekmesi: bugünden önceki günler pasif (tıklanamaz, soluk, doluluk barı gizli).
 - [X] T096 İzin talebine **açıklama (reason)**: `LeaveRequest.reason` (migration `add_leave_request_reason`); create ucunda zorunlu + ≤500 karakter doğrulaması; doktor formunda textarea; açıklama hem doktorun "İzin Taleplerim" listesinde hem admin talep kartında görünür. Test **6/6** geçti (eksik/boş/501 karakter → 400, trim, iki listede de alan mevcut).
+## Phase 27: Staj Geri Bildirimi — Profil, Şifre Sıfırlama, Bölüm Kartları
+
+- [X] T099 **Hasta profil sayfası** (G1): `User`'a `phone/birthDate/gender/address` (migration `add_user_profile_fields`); `GET /auth/me`, `PATCH /auth/profile` (ad + kişisel bilgiler, birthDate yerel-gün formatlanır), `PATCH /auth/password` (mevcut şifre doğrulaması). Frontend: Navbar avatar → `/profil`; kişisel bilgi + şifre değiştirme kartları; store `updateUser`. Test **15/15**.
+- [X] T100 **Şifremi unuttum** (G2): `PasswordResetToken` (tokenHash/expiresAt/usedAt, migration `add_password_reset_token`); `POST /auth/forgot-password` (generic yanıt = email enumeration önlemi, önceki token'ları geçersiz kılar), `POST /auth/reset-password` (tek kullanımlık, 1 saat). E-posta util'ine `sendPasswordReset` + Gmail (465/SSL) desteği; `FRONTEND_URL` env. Frontend: Login'de "Şifremi unuttum?" linki, ForgotPassword + ResetPassword sayfaları. Test **14/14**.
+- [X] T101 **Bölüm kartları** (G3): `GET /departments/availability-summary` (bölüm başına 30 günlük boş slot sayısı + en yakın slot, tek sorgu setiyle in-memory hesap). Frontend: Home bölüm kartları gradyan + ikon (ada göre `deptVisual` eşlemesi: kalp/göz/kulak/diş/beyin… + yedek palet) + "Uygun randevu sayısı: N" + en yakın slot tarih rozeti / "bulunamadı" çanı. Test **7/7**.
+
+**Checkpoint**: ✅ Üç görev de mevcut mimariyi bozmadan eklendi; toplam **36 backend testi** + build/lint temiz. Staj sorumlusunun üç isteği (profil güncelleme, şifremi unuttum, renkli/ikonlu bölüm kartları) karşılandı.
+
+---
+
 - [X] T098 Doktor paneli **Takviminiz**: `GET /api/doctors/me/availability?month=` (DOKTOR; availability hesabı `buildMonthAvailability` yardımcısına çıkarıldı) — ay görünümü yoğunluk barlı (sakin/orta/yoğun-kapalı; İPTAL hariç TAMAMLANDI dahil sayım ∪ kapalı slotlar), bugün vurgulu, güne tıklayınca sağ panelde o günün randevuları (saat + hasta + durum rozeti, İPTAL soluk); varsayılan seçim bugün. Test **6/6** geçti (400/401/403, randevulu gün 15, kapalı gün dayClosed+0, public uç regresyonsuz).
 - [X] T097 İzin **çakışma korumaları**: yeni talep, BEKLIYOR **veya ONAYLANDI** taleple çakışıyorsa ya da aralıktaki tüm günler zaten kapalıysa (admin doğrudan izne ayırdıysa) 409; admin onayı da aynı iki korumayla 409 döner (talep BEKLIYOR kalır, red mümkün). Kısmi kapalı aralıkta talep serbest (kalan günler için). Test **11/11** geçti.
 

@@ -41,10 +41,32 @@ model User {
   role      Role     @default(HASTA)
   createdAt DateTime @default(now())
 
+  // Profil (opsiyonel kişisel bilgiler — hasta kendi günceller)
+  phone     String?
+  birthDate DateTime? // yalnızca gün (yerel gün başı)
+  gender    String? // "KADIN" | "ERKEK" | "BELIRTILMEMIS"
+  address   String?
+
   // İlişkiler
   doctorProfile Doctor? // DOKTOR ise 1:1 profil
   appointments  Appointment[] @relation("PatientAppointments") // HASTA olarak alınan randevular
   reviews       Review[] // HASTA olarak bıraktığı değerlendirmeler
+  resetTokens   PasswordResetToken[]
+}
+
+// --- Şifre Sıfırlama Token'ı (şifremi unuttum akışı) ---
+// Token, e-postayla gönderilen linkte taşınır; yalnızca hash'i saklanır.
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tokenHash String   @unique // sha256(token)
+  expiresAt DateTime // üretimden 1 saat sonra
+  usedAt    DateTime? // kullanıldıysa doldurulur (tek kullanımlık)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }
 
 model Department {
