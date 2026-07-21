@@ -83,6 +83,37 @@ Bir hasta ile bir doktor arasındaki, belirli tarih ve 30 dk slot için planlanm
 - Aynı `patientId`+`date`+`timeSlot` için birden fazla `AKTIF` olamaz (FR-012).
 - İptal, `status`'u `IPTAL`'e çeker; kayıt silinmez, böylece slot yeniden boşa çıkar (FR-015, FR-016).
 
+## Entity: Notification
+
+Kullanıcıya düşen in-app bildirim (çan). Randevu/izin/değerlendirme olaylarında sunucuda
+**best-effort** üretilir (`utils/notify.js`); üretim hatası ana işlemi bozmaz.
+
+| Alan | Tip | Kısıt / Not |
+|------|-----|-------------|
+| id | Int (autoincrement) | Birincil anahtar |
+| userId | Int | `User.id`'ye FK (bildirimin alıcısı) |
+| type | String | Olay tipi (aşağıdaki liste) |
+| title | String | Kısa başlık |
+| body | String | Açıklama metni |
+| link | String? | Frontend rota (ör. "/appointments") |
+| appointmentId | Int? | İlgili randevu (hatırlatma idempotency + derin bağlantı) |
+| readAt | DateTime? | Okunduysa doldurulur |
+| createdAt | DateTime | Varsayılan now() |
+
+**İndeksler**: `(userId, readAt)`, `(userId, createdAt)`.
+
+**Tipler**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_TAMAMLANDI`, `RANDEVU_HATIRLATMA`,
+`RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`, `YENI_DEGERLENDIRME`.
+
+**Olay → alıcı**:
+- Randevu oluşturuldu → doktor (yeni randevu) + hasta (onay).
+- Randevu iptal → iptali hasta yaptıysa doktora, doktor/admin yaptıysa hastaya.
+- Randevu tamamlandı → hasta (değerlendirme daveti).
+- Randevu hatırlatma (24s, cron) → hasta. `appointmentId` ile idempotent (mükerrer üretilmez).
+- İzin talebi → tüm ADMIN'ler. İzin kararı → talebi açan doktor.
+- İzinden/doktor silinmesinden etkilenen randevular → ilgili hastalar (aktarıldı/iptal edildi).
+- Yeni değerlendirme → doktor.
+
 ## Çakışma / Benzersizlik Stratejisi
 
 - Uygulama katmanı: randevu oluşturmadan önce `AKTIF` çakışma sorguları (doktor ve hasta için).

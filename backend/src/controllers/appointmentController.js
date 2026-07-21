@@ -4,6 +4,7 @@
 const prisma = require("../models/prismaClient");
 const { generateSlots, slotToMinutes } = require("../utils/slots");
 const email = require("../utils/email");
+const { notify, TYPES } = require("../utils/notify");
 
 // Yerel tarih bileşenlerinden "YYYY-MM-DD" üretir (tek referans saat dilimi — sunucu yereli).
 function toDateStr(d) {
@@ -11,6 +12,12 @@ function toDateStr(d) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+// "YYYY-MM-DD" → "DD.MM.YYYY" (bildirim metinleri için okunaklı tarih)
+function trDate(ymd) {
+  const [y, m, d] = ymd.split("-");
+  return `${d}.${m}.${y}`;
 }
 
 // ────────────────────────────────────────────
@@ -195,6 +202,28 @@ const createAppointment = async (req, res) => {
       console.error("Onay e-postası gönderilemedi:", mailErr.message);
     });
 
+    // In-app bildirimler (best-effort, fire-and-forget): doktora "yeni randevu",
+    // hastaya "randevunuz oluşturuldu".
+    (async () => {
+      const patient = await prisma.user.findUnique({ where: { id: patientId }, select: { name: true } });
+      const patientName = patient?.name || "Bir hasta";
+      const when = `${trDate(date)} ${timeSlot}`;
+      await notify(doctor.userId, {
+        type: TYPES.RANDEVU_OLUSTURULDU,
+        title: "Yeni randevu",
+        body: `${patientName} — ${when}`,
+        link: "/doctor-dashboard",
+        appointmentId: appointment.id,
+      });
+      await notify(patientId, {
+        type: TYPES.RANDEVU_OLUSTURULDU,
+        title: "Randevunuz oluşturuldu",
+        body: `${doctor.user.name} — ${when}`,
+        link: "/appointments",
+        appointmentId: appointment.id,
+      });
+    })().catch((e) => console.error("Randevu bildirimi hatası:", e.message));
+
     return res.status(201).json({ success: true, message: "Randevu oluşturuldu.", data: appointment });
   } catch (error) {
     console.error("Randevu oluşturma hatası:", error);
@@ -216,7 +245,7 @@ const cancelAppointment = async (req, res) => {
     const appointment = await prisma.appointment.findUnique({
       where: { id },
       include: {
-        patient: { select: { email: true } },
+        patient: { select: { name: true, email: true } },
         doctor: { include: { user: { select: { name: true } } } },
       },
     });
@@ -253,6 +282,27 @@ const cancelAppointment = async (req, res) => {
     }).catch((mailErr) => {
       console.error("İptal e-postası gönderilemedi:", mailErr.message);
     });
+
+    // In-app bildirim (best-effort): iptali kim yaptıysa karşı tarafa haber ver.
+    // Hasta iptal etti → doktora; doktor/admin iptal etti → hastaya.
+    const when = `${trDate(toDateStr(appointment.date))} ${appointment.timeSlot}`;
+    if (isOwner) {
+      notify(appointment.doctor.userId, {
+        type: TYPES.RANDEVU_IPTAL,
+        title: "Randevu iptal edildi",
+        body: `${appointment.patient.name} randevusunu iptal etti — ${when}`,
+        link: "/doctor-dashboard",
+        appointmentId: appointment.id,
+      }).catch((e) => console.error("İptal bildirimi hatası:", e.message));
+    } else {
+      notify(appointment.patientId, {
+        type: TYPES.RANDEVU_IPTAL,
+        title: "Randevunuz iptal edildi",
+        body: `${appointment.doctor.user.name} — ${when}`,
+        link: "/appointments",
+        appointmentId: appointment.id,
+      }).catch((e) => console.error("İptal bildirimi hatası:", e.message));
+    }
 
     return res.status(200).json({
       success: true,
@@ -308,6 +358,16 @@ const completeAppointment = async (req, res) => {
     }
 
     const updated = await prisma.appointment.update({ where: { id }, data: { status: "TAMAMLANDI" } });
+
+    // In-app bildirim (best-effort): hastaya "tamamlandı — değerlendirebilirsiniz".
+    notify(appointment.patientId, {
+      type: TYPES.RANDEVU_TAMAMLANDI,
+      title: "Randevunuz tamamlandı",
+      body: `${trDate(toDateStr(appointment.date))} randevunuz tamamlandı. Değerlendirme yapabilirsiniz.`,
+      link: "/appointments",
+      appointmentId: appointment.id,
+    }).catch((e) => console.error("Tamamlama bildirimi hatası:", e.message));
+
     return res.status(200).json({
       success: true,
       message: "Randevu tamamlandı olarak işaretlendi.",

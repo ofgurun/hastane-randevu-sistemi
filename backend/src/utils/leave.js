@@ -3,10 +3,13 @@
 const prisma = require("../models/prismaClient");
 
 // Randevuları yedek doktora aktarır (tx içinde). Yedek doktor aynı gün+slotta
-// doluysa randevu aktarılamaz → IPTAL edilir. { transferred, cancelled } döner.
+// doluysa randevu aktarılamaz → IPTAL edilir.
+// → { transferred, cancelled, affected } döner. affected: etkilenen randevuların
+//    hasta bildirimi için özeti [{ patientId, appointmentId, action, date, timeSlot }].
 async function transferAppointments(tx, appointments, backupId) {
   let transferred = 0;
   let cancelled = 0;
+  const affected = [];
   for (const a of appointments) {
     const dayStart = new Date(a.date);
     dayStart.setHours(0, 0, 0, 0);
@@ -20,15 +23,19 @@ async function transferAppointments(tx, appointments, backupId) {
         date: { gte: dayStart, lte: dayEnd },
       },
     });
+    let action;
     if (conflict) {
       await tx.appointment.update({ where: { id: a.id }, data: { status: "IPTAL" } });
       cancelled++;
+      action = "cancelled";
     } else {
       await tx.appointment.update({ where: { id: a.id }, data: { doctorId: backupId } });
       transferred++;
+      action = "transferred";
     }
+    affected.push({ patientId: a.patientId, appointmentId: a.id, action, date: a.date, timeSlot: a.timeSlot });
   }
-  return { transferred, cancelled };
+  return { transferred, cancelled, affected };
 }
 
 // İzni uygular: aralıktaki günleri TimeBlock ile kapatır, AKTIF randevuları
@@ -72,7 +79,7 @@ async function applyLeave(doctor, startDate, endDate) {
     if (newBlocks.length > 0) {
       await tx.timeBlock.createMany({ data: newBlocks });
     }
-    let stats = { transferred: 0, cancelled: 0 };
+    let stats = { transferred: 0, cancelled: 0, affected: [] };
     if (activeInRange.length > 0) {
       stats = await transferAppointments(tx, activeInRange, doctor.backupDoctorId);
     }

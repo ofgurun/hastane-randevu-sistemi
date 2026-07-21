@@ -5,6 +5,7 @@
 const cron = require("node-cron");
 const prisma = require("../models/prismaClient");
 const email = require("./email");
+const { notify, TYPES } = require("./notify");
 
 // Test kolaylığı için her dakika; üretimde saat başı ("0 * * * *") tercih edilebilir.
 const SCHEDULE = "* * * * *";
@@ -51,6 +52,26 @@ async function runReminders() {
     const when = appointmentDateTime(a);
     // Sadece "şu an ile 24 saat sonrası" arasındakiler
     if (when > now && when <= in24h) {
+      // In-app hatırlatma bildirimi (e-postadan bağımsız kanal; appointmentId ile
+      // idempotent — aynı randevu için birden fazla hatırlatma üretilmez).
+      try {
+        const existing = await prisma.notification.findFirst({
+          where: { appointmentId: a.id, type: TYPES.RANDEVU_HATIRLATMA },
+          select: { id: true },
+        });
+        if (!existing) {
+          await notify(a.patientId, {
+            type: TYPES.RANDEVU_HATIRLATMA,
+            title: "Randevu hatırlatması",
+            body: `${a.doctor.user.name} — ${formatDate(a.date)} ${a.timeSlot}`,
+            link: "/appointments",
+            appointmentId: a.id,
+          });
+        }
+      } catch (err) {
+        console.error(`[cron] In-app hatırlatma bildirimi hatası (randevu ${a.id}):`, err.message);
+      }
+
       try {
         const info = await email.sendReminderEmail(
           a.patient.email,

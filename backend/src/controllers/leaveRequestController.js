@@ -4,8 +4,15 @@
 
 const prisma = require("../models/prismaClient");
 const { applyLeave } = require("../utils/leave");
+const { notify, notifyRole, notifyLeaveAffected, TYPES } = require("../utils/notify");
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+// "YYYY-MM-DD" → "DD.MM.YYYY"
+function trDateStr(ymd) {
+  const [y, m, d] = ymd.split("-");
+  return `${d}.${m}.${y}`;
+}
 
 // "YYYY-MM-DD" → yerel gün başı Date
 function toLocalDay(str) {
@@ -58,7 +65,10 @@ const createLeaveRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: "İzin süresi en fazla 366 gün olabilir." });
     }
 
-    const doctor = await prisma.doctor.findUnique({ where: { userId: req.user.id } });
+    const doctor = await prisma.doctor.findUnique({
+      where: { userId: req.user.id },
+      include: { user: { select: { name: true } } },
+    });
     if (!doctor) {
       return res.status(404).json({ success: false, message: "Doktor profili bulunamadı." });
     }
@@ -98,6 +108,14 @@ const createLeaveRequest = async (req, res) => {
     const request = await prisma.leaveRequest.create({
       data: { doctorId: doctor.id, startDate: start, endDate: end, reason: trimmedReason },
     });
+
+    // In-app bildirim (best-effort): tüm yöneticilere yeni izin talebi.
+    notifyRole("ADMIN", {
+      type: TYPES.IZIN_TALEBI,
+      title: "Yeni izin talebi",
+      body: `${doctor.user.name} — ${trDateStr(startDate)} – ${trDateStr(endDate)}`,
+      link: "/admin",
+    }).catch((e) => console.error("İzin talebi bildirimi hatası:", e.message));
 
     return res.status(201).json({
       success: true,
@@ -185,7 +203,7 @@ const decideLeaveRequest = async (req, res) => {
 
     const request = await prisma.leaveRequest.findUnique({
       where: { id },
-      include: { doctor: true },
+      include: { doctor: { include: { user: { select: { name: true } } } } },
     });
     if (!request) {
       return res.status(404).json({ success: false, message: "İzin talebi bulunamadı." });
@@ -194,11 +212,20 @@ const decideLeaveRequest = async (req, res) => {
       return res.status(400).json({ success: false, message: "Bu talep zaten karara bağlanmış." });
     }
 
+    const rangeLabel = `${trDateStr(toDateStr(request.startDate))} – ${trDateStr(toDateStr(request.endDate))}`;
+
     if (action === "reject") {
       const updated = await prisma.leaveRequest.update({
         where: { id },
         data: { status: "REDDEDILDI", decidedAt: new Date() },
       });
+      // In-app bildirim (best-effort): talebi açan doktora sonuç.
+      notify(request.doctor.userId, {
+        type: TYPES.IZIN_KARARI,
+        title: "İzin talebiniz reddedildi",
+        body: `${rangeLabel} tarihli izin talebiniz reddedildi.`,
+        link: "/doctor-dashboard",
+      }).catch((e) => console.error("İzin kararı bildirimi hatası:", e.message));
       return res.status(200).json({
         success: true,
         message: "İzin talebi reddedildi.",
@@ -247,6 +274,17 @@ const decideLeaveRequest = async (req, res) => {
       where: { id },
       data: { status: "ONAYLANDI", decidedAt: new Date() },
     });
+
+    // In-app bildirimler (best-effort): doktora onay + etkilenen hastalara aktarım/iptal.
+    notify(request.doctor.userId, {
+      type: TYPES.IZIN_KARARI,
+      title: "İzin talebiniz onaylandı",
+      body: `${rangeLabel} tarihli izniniz onaylandı.`,
+      link: "/doctor-dashboard",
+    }).catch((e) => console.error("İzin kararı bildirimi hatası:", e.message));
+    notifyLeaveAffected(result.affected, request.doctor.user.name).catch((e) =>
+      console.error("İzin hasta bildirimi hatası:", e.message)
+    );
 
     return res.status(200).json({
       success: true,

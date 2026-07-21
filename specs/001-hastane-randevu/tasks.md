@@ -365,6 +365,16 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 ---
 
+## Phase 28: In-App Bildirim Sistemi (Çan) — Tüm Roller
+
+- [X] T102 **Model + uçlar**: `Notification` (userId/type/title/body/link/appointmentId/readAt, migration `add_notifications`); `utils/notify.js` (`notify`/`notifyMany`/`notifyRole`/`notifyLeaveAffected`, best-effort — ana işlemi bozmaz). Uçlar: `GET /notifications` (liste + unreadCount), `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all` (hepsi authenticate, sahiplik korumalı).
+- [X] T103 **Olay hook'ları**: randevu oluştur (doktor+hasta), iptal (hasta↔doktor yönlü), tamamla (hasta), değerlendirme (doktor), izin talebi (tüm adminler), izin kararı (doktor), izinden/silmeden etkilenen randevular (hastalar — `utils/leave.js` etkilenen listesini döndürür). Cron: e-postadan bağımsız, `appointmentId` ile idempotent in-app hatırlatma. `DISABLE_CRON=1` test bayrağı.
+- [X] T104 **Frontend çan**: `NotificationBell` (Navbar'da, tüm roller) — okunmamış rozeti, dropdown liste (tipe göre ikon/renk, göreli zaman), tek/tümü okundu, ~60 sn polling + yeni bildirimde `toast`; `notificationService`. İyimser okundu güncellemesi + dışarı-tıkla kapanış.
+
+**Checkpoint**: ✅ Bildirim sistemi **27/27** uçtan-uca test geçti (uçlar + sahiplik 404 + 8 olay tipi: randevu oluştur/iptal×2/tamamla/değerlendirme/izin talebi/izin kararı/aktarım). Frontend build + lint temiz. Mevcut mimari (e-posta hatırlatma, izin akışı) bozulmadı; iki kanal (e-posta + in-app) bağımsız.
+
+---
+
 - [X] T098 Doktor paneli **Takviminiz**: `GET /api/doctors/me/availability?month=` (DOKTOR; availability hesabı `buildMonthAvailability` yardımcısına çıkarıldı) — ay görünümü yoğunluk barlı (sakin/orta/yoğun-kapalı; İPTAL hariç TAMAMLANDI dahil sayım ∪ kapalı slotlar), bugün vurgulu, güne tıklayınca sağ panelde o günün randevuları (saat + hasta + durum rozeti, İPTAL soluk); varsayılan seçim bugün. Test **6/6** geçti (400/401/403, randevulu gün 15, kapalı gün dayClosed+0, public uç regresyonsuz).
 - [X] T097 İzin **çakışma korumaları**: yeni talep, BEKLIYOR **veya ONAYLANDI** taleple çakışıyorsa ya da aralıktaki tüm günler zaten kapalıysa (admin doğrudan izne ayırdıysa) 409; admin onayı da aynı iki korumayla 409 döner (talep BEKLIYOR kalır, red mümkün). Kısmi kapalı aralıkta talep serbest (kalan günler için). Test **11/11** geçti.
 

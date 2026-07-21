@@ -258,6 +258,43 @@ Hasta, geçmişte gerçekleşmiş ve iptal edilmemiş kendi randevusu için dokt
 - **401**: token yok · **403**: randevu bu hastaya ait değil · **404**: randevu yok
 - **409**: bu randevu için zaten bir değerlendirme var
 
+## Bildirimler (Notification)
+
+In-app bildirim (çan) sistemi — tüm roller için. Bildirimler olay anında sunucuda
+**best-effort** üretilir (randevu oluştur/iptal/tamamla, randevu hatırlatma, izin talebi/kararı,
+izinden randevu aktarımı/iptali, yeni değerlendirme). Frontend ~60 sn'de bir yoklar (polling).
+Kullanıcı yalnızca **kendi** bildirimlerini görür/yönetir.
+
+### GET /api/notifications?limit=20&unread=1
+Son bildirimler (yeni→eski) + okunmamış sayısı. `unread=1` yalnızca okunmamışları döner.
+
+- **Auth**: Bearer (her rol)
+- **200**: `{ success, data: { items: [ { id, type, title, body, link, appointmentId, readAt, createdAt } ], unreadCount } }`
+- **401**: token yok
+
+### GET /api/notifications/unread-count
+Hafif polling ucu — yalnızca okunmamış sayısı.
+
+- **Auth**: Bearer (her rol)
+- **200**: `{ success, data: { unreadCount } }`
+
+### PATCH /api/notifications/:id/read
+Tek bildirimi okundu işaretle.
+
+- **Auth**: Bearer (bildirimin sahibi)
+- **200**: `{ success, message }`
+- **400**: geçersiz id · **404**: bildirim yok / başkasına ait
+
+### PATCH /api/notifications/read-all
+Kullanıcının tüm okunmamış bildirimlerini okundu işaretle.
+
+- **Auth**: Bearer (her rol)
+- **200**: `{ success, message, data: { updated } }`
+
+> **Bildirim tipleri (`type`)**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_TAMAMLANDI`,
+> `RANDEVU_HATIRLATMA`, `RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`, `YENI_DEGERLENDIRME`.
+> `link` alanı ilgili sayfaya yönlendirir (ör. `/appointments`, `/doctor-dashboard`, `/admin`).
+
 ## Ortak Hata Kodları
 
 | Kod | Anlam |

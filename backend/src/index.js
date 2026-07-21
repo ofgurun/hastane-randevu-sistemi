@@ -16,6 +16,7 @@ const doctorRoutes = require("./routes/doctorRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Merkezi hata yönetimi
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
@@ -44,6 +45,7 @@ apiRouter.use("/doctors", doctorRoutes);
 apiRouter.use("/appointments", appointmentRoutes);
 apiRouter.use("/reviews", reviewRoutes);
 apiRouter.use("/admin", adminRoutes);
+apiRouter.use("/notifications", notificationRoutes);
 
 app.use("/api", apiRouter);
 
@@ -58,8 +60,10 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Sunucu ${PORT} portunda çalışıyor — http://localhost:${PORT}/api/health`);
-  // Randevu hatırlatma görevini başlat
-  startReminderCron();
+  // Randevu hatırlatma görevini başlat (DISABLE_CRON=1 ile testlerde atlanabilir)
+  if (process.env.DISABLE_CRON !== "1") {
+    startReminderCron();
+  }
 });
 
 module.exports = app;

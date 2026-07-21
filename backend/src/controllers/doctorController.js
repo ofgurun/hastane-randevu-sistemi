@@ -5,6 +5,19 @@ const prisma = require("../models/prismaClient");
 const bcrypt = require("bcryptjs");
 const { generateSlots } = require("../utils/slots");
 const { transferAppointments, applyLeave } = require("../utils/leave");
+const { notify, notifyLeaveAffected, TYPES } = require("../utils/notify");
+
+// "YYYY-MM-DD" → "DD.MM.YYYY"
+function trDateStr(ymd) {
+  const [y, m, d] = ymd.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+// Date → "DD.MM.YYYY" (yerel)
+function trFromDate(d) {
+  const x = new Date(d);
+  return `${String(x.getDate()).padStart(2, "0")}.${String(x.getMonth() + 1).padStart(2, "0")}.${x.getFullYear()}`;
+}
 
 // ────────────────────────────────────────────
 // GET /api/doctors — Tüm doktorları listele
@@ -290,10 +303,14 @@ const deleteDoctor = async (req, res) => {
       return res.status(400).json({ success: false, message: "Geçersiz doktor id." });
     }
 
-    const doctor = await prisma.doctor.findUnique({ where: { id } });
+    const doctor = await prisma.doctor.findUnique({
+      where: { id },
+      include: { user: { select: { name: true } } },
+    });
     if (!doctor) {
       return res.status(404).json({ success: false, message: "Doktor bulunamadı." });
     }
+    const doctorName = doctor.user.name; // silmeden önce yakala (bildirim metni için)
 
     // Gelecekteki AKTIF randevular (bugün dahil ileri)
     const now = new Date();
@@ -311,7 +328,7 @@ const deleteDoctor = async (req, res) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      let stats = { transferred: 0, cancelled: 0 };
+      let stats = { transferred: 0, cancelled: 0, affected: [] };
       if (futureActive.length > 0) {
         stats = await transferAppointments(tx, futureActive, doctor.backupDoctorId);
       }
@@ -326,6 +343,22 @@ const deleteDoctor = async (req, res) => {
       await tx.user.delete({ where: { id: doctor.userId } });
       return stats;
     });
+
+    // In-app bildirim (best-effort): randevusu aktarılan/iptal olan hastalara.
+    // NOT: aktarılan randevu kaydı silinmediği için (yeni doktora taşındı) link geçerli;
+    // iptal edilenlerde de hasta bilgilendirilir.
+    for (const a of result.affected) {
+      const when = `${trFromDate(a.date)} ${a.timeSlot}`;
+      const transferred = a.action === "transferred";
+      notify(a.patientId, {
+        type: TYPES.RANDEVU_AKTARILDI,
+        title: transferred ? "Randevunuz aktarıldı" : "Randevunuz iptal edildi",
+        body: transferred
+          ? `${doctorName} ayrıldı — ${when} randevunuz yedek doktora aktarıldı.`
+          : `${doctorName} ayrıldı — ${when} randevunuz iptal edildi.`,
+        link: "/appointments",
+      }).catch((e) => console.error("Doktor silme bildirimi hatası:", e.message));
+    }
 
     return res.status(200).json({
       success: true,
@@ -373,7 +406,10 @@ const setDoctorLeave = async (req, res) => {
       return res.status(400).json({ success: false, message: "İzin süresi en fazla 366 gün olabilir." });
     }
 
-    const doctor = await prisma.doctor.findUnique({ where: { id } });
+    const doctor = await prisma.doctor.findUnique({
+      where: { id },
+      include: { user: { select: { name: true } } },
+    });
     if (!doctor) {
       return res.status(404).json({ success: false, message: "Doktor bulunamadı." });
     }
@@ -383,6 +419,17 @@ const setDoctorLeave = async (req, res) => {
     if (!result.ok) {
       return res.status(409).json({ success: false, message: result.message });
     }
+
+    // In-app bildirimler (best-effort): doktora izin bilgisi + etkilenen hastalara aktarım/iptal.
+    notify(doctor.userId, {
+      type: TYPES.IZIN_KARARI,
+      title: "İzne ayrıldınız",
+      body: `${trDateStr(startDate)} – ${trDateStr(endDate)} tarihleri için yönetici tarafından izne ayrıldınız.`,
+      link: "/doctor-dashboard",
+    }).catch((e) => console.error("İzin bildirimi hatası:", e.message));
+    notifyLeaveAffected(result.affected, doctor.user.name).catch((e) =>
+      console.error("İzin hasta bildirimi hatası:", e.message)
+    );
 
     return res.status(200).json({
       success: true,

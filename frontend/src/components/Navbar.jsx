@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import useAuthStore from "../store/authStore";
 import { initials } from "../utils/ui";
+import NotificationBell from "./NotificationBell";
 
 const ROLE_LABELS = { HASTA: "Hasta", DOKTOR: "Doktor", ADMIN: "Yönetici" };
 
@@ -68,6 +69,7 @@ export default function Navbar() {
         <Brand />
         <nav className="ml-3 hidden items-center gap-1 sm:flex">{links}</nav>
         <div className="ml-auto flex items-center gap-3">
+          <NotificationBell />
           <Link to="/profil" className="hidden text-right leading-tight sm:block">
             <div className="text-[13.5px] font-bold text-stone-800 transition hover:text-teal-700">{user?.name}</div>
             <div className="text-[11px] font-semibold text-stone-400">{ROLE_LABELS[role] || ""}</div>

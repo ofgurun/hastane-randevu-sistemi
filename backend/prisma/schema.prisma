@@ -52,6 +52,27 @@ model User {
   appointments  Appointment[] @relation("PatientAppointments") // HASTA olarak alınan randevular
   reviews       Review[] // HASTA olarak bıraktığı değerlendirmeler
   resetTokens   PasswordResetToken[]
+  notifications Notification[] // kullanıcıya düşen in-app bildirimler
+}
+
+// --- In-App Bildirim (çan) ---
+// Tüm roller için: randevu/izin/değerlendirme olaylarında oluşturulur.
+// best-effort üretilir (utils/notify.js) — ana işlemi bloke etmez.
+model Notification {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  type          String // "RANDEVU_OLUSTURULDU" | "RANDEVU_IPTAL" | "RANDEVU_TAMAMLANDI" | "RANDEVU_HATIRLATMA" | "RANDEVU_AKTARILDI" | "IZIN_TALEBI" | "IZIN_KARARI" | "YENI_DEGERLENDIRME"
+  title         String
+  body          String
+  link          String? // frontend rota (ör. "/appointments", "/doctor-dashboard")
+  appointmentId Int? // ilgili randevu (hatırlatma idempotency + derin bağlantı)
+  readAt        DateTime? // okunduysa doldurulur
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 // --- Şifre Sıfırlama Token'ı (şifremi unuttum akışı) ---

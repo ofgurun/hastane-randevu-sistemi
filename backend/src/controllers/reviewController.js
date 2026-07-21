@@ -4,6 +4,7 @@
 
 const prisma = require("../models/prismaClient");
 const { slotToMinutes } = require("../utils/slots");
+const { notify, TYPES } = require("../utils/notify");
 
 const createReview = async (req, res) => {
   try {
@@ -63,6 +64,23 @@ const createReview = async (req, res) => {
         comment,
       },
     });
+
+    // In-app bildirim (best-effort): doktora "yeni değerlendirme aldınız".
+    (async () => {
+      const doctor = await prisma.doctor.findUnique({
+        where: { id: appointment.doctorId },
+        select: { userId: true },
+      });
+      if (doctor) {
+        await notify(doctor.userId, {
+          type: TYPES.YENI_DEGERLENDIRME,
+          title: "Yeni değerlendirme",
+          body: `Bir hastanız randevunuzu değerlendirdi: ${numericRating}★`,
+          link: "/doctor-dashboard",
+          appointmentId: appointment.id,
+        });
+      }
+    })().catch((e) => console.error("Değerlendirme bildirimi hatası:", e.message));
 
     return res.status(201).json({ success: true, message: "Değerlendirmeniz kaydedildi.", data: review });
   } catch (error) {
