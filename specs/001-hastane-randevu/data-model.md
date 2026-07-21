@@ -102,8 +102,8 @@ Kullanıcıya düşen in-app bildirim (çan). Randevu/izin/değerlendirme olayla
 
 **İndeksler**: `(userId, readAt)`, `(userId, createdAt)`.
 
-**Tipler**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_TAMAMLANDI`, `RANDEVU_HATIRLATMA`,
-`RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`, `YENI_DEGERLENDIRME`.
+**Tipler**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_ERTELENDI`, `RANDEVU_TAMAMLANDI`,
+`RANDEVU_HATIRLATMA`, `RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`, `YENI_DEGERLENDIRME`.
 
 **Olay → alıcı**:
 - Randevu oluşturuldu → doktor (yeni randevu) + hasta (onay).

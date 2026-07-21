@@ -56,6 +56,15 @@ async function sendAppointmentCancellation(to, { doctorName, date, timeSlot }) {
   );
 }
 
+async function sendAppointmentReschedule(to, { doctorName, oldDate, oldTimeSlot, date, timeSlot }) {
+  return sendMail(
+    to,
+    "Randevunuz Ertelendi",
+    `Sayın hastamız,\n\n${doctorName} ile ${oldDate} ${oldTimeSlot} tarihli randevunuz ` +
+      `${date} tarihine saat ${timeSlot} olarak ertelenmiştir.\n\nHastane Randevu Sistemi`
+  );
+}
+
 async function sendReminderEmail(to, patientName, doctorName, date, timeSlot) {
   return sendMail(
     to,
@@ -78,6 +87,7 @@ async function sendPasswordReset(to, patientName, resetUrl) {
 module.exports = {
   sendAppointmentConfirmation,
   sendAppointmentCancellation,
+  sendAppointmentReschedule,
   sendReminderEmail,
   sendPasswordReset,
 };

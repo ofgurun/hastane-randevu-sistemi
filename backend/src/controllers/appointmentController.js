@@ -316,6 +316,155 @@ const cancelAppointment = async (req, res) => {
 };
 
 // ────────────────────────────────────────────
+// PATCH /api/appointments/:id/reschedule — Randevuyu ertele (tarih/saat değiştir)
+// Aynı doktorla, yeni bir boş slota taşır. Yalnızca sahibi hasta veya ADMIN.
+// createAppointment ile aynı iş kuralları (kendisi hariç çakışma kontrolü).
+// ────────────────────────────────────────────
+const rescheduleAppointment = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ success: false, message: "Geçersiz randevu id." });
+    }
+    const { date, timeSlot } = req.body;
+
+    if (!date || !timeSlot) {
+      return res.status(400).json({ success: false, message: "date (YYYY-MM-DD) ve timeSlot (HH:mm) zorunludur." });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, message: "date YYYY-MM-DD formatında olmalıdır." });
+    }
+    if (!generateSlots().includes(timeSlot)) {
+      return res.status(400).json({ success: false, message: "Geçersiz zaman dilimi (slot)." });
+    }
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id },
+      include: {
+        patient: { select: { email: true } },
+        doctor: { include: { user: { select: { name: true } } } },
+      },
+    });
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Randevu bulunamadı." });
+    }
+
+    // Yetki: yalnızca randevunun sahibi hasta veya ADMIN
+    const isOwner = appointment.patientId === req.user.id;
+    const isAdmin = req.user.role === "ADMIN";
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: "Bu randevuyu erteleme yetkiniz yok." });
+    }
+
+    // Yalnızca AKTIF randevu ertelenebilir
+    if (appointment.status === "IPTAL") {
+      return res.status(400).json({ success: false, message: "İptal edilmiş bir randevu ertelenemez." });
+    }
+    if (appointment.status === "TAMAMLANDI") {
+      return res.status(400).json({ success: false, message: "Tamamlanmış bir randevu ertelenemez." });
+    }
+
+    const [y, mo, d] = date.split("-").map(Number);
+    const slotMin = slotToMinutes(timeSlot);
+
+    // Aynı tarih/saat ise değişiklik yok
+    if (toDateStr(appointment.date) === date && appointment.timeSlot === timeSlot) {
+      return res.status(400).json({ success: false, message: "Randevu zaten bu tarih ve saatte." });
+    }
+
+    // Geçmiş tarih/saat reddi
+    const newDateTime = new Date(y, mo - 1, d, Math.floor(slotMin / 60), slotMin % 60, 0, 0);
+    if (newDateTime <= new Date()) {
+      return res.status(400).json({ success: false, message: "Geçmiş bir tarih/saate ertelenemez." });
+    }
+
+    const doctorId = appointment.doctorId;
+    const dayStart = new Date(y, mo - 1, d, 0, 0, 0, 0);
+    const dayEnd = new Date(y, mo - 1, d, 23, 59, 59, 999);
+
+    // Kapalı gün/saat kontrolü (TimeBlock)
+    const block = await prisma.timeBlock.findFirst({
+      where: { doctorId, date: { gte: dayStart, lte: dayEnd }, OR: [{ timeSlot: null }, { timeSlot }] },
+    });
+    if (block) {
+      return res.status(409).json({
+        success: false,
+        message: block.timeSlot === null ? "Bu tarih randevuya kapatılmıştır." : "Bu saat randevuya kapatılmıştır.",
+      });
+    }
+
+    // Slot boş mu? (kendisi hariç)
+    const slotTaken = await prisma.appointment.findFirst({
+      where: { doctorId, status: "AKTIF", timeSlot, date: { gte: dayStart, lte: dayEnd }, id: { not: id } },
+    });
+    if (slotTaken) {
+      return res.status(409).json({ success: false, message: "Bu zaman dilimi dolu." });
+    }
+
+    // Hastanın yeni günde başka AKTIF randevusu var mı? (kendisi hariç)
+    const sameDay = await prisma.appointment.findFirst({
+      where: { patientId: appointment.patientId, status: "AKTIF", date: { gte: dayStart, lte: dayEnd }, id: { not: id } },
+    });
+    if (sameDay) {
+      return res.status(409).json({ success: false, message: "Bu gün için zaten aktif bir randevu var." });
+    }
+
+    const oldDateStr = toDateStr(appointment.date);
+    const oldTimeSlot = appointment.timeSlot;
+
+    // Güncelle: yeni gün başı + slot; hatırlatma yeniden gönderilebilsin diye reminderSent sıfırla
+    const updated = await prisma.appointment.update({
+      where: { id },
+      data: { date: new Date(y, mo - 1, d), timeSlot, reminderSent: false },
+    });
+
+    // Eski tarihe ait hatırlatma bildirimini kaldır (yeni tarih için tekrar üretilebilsin)
+    await prisma.notification
+      .deleteMany({ where: { appointmentId: id, type: TYPES.RANDEVU_HATIRLATMA } })
+      .catch(() => {});
+
+    // Erteleme e-postası (fire-and-forget)
+    email.sendAppointmentReschedule(appointment.patient.email, {
+      doctorName: appointment.doctor.user.name,
+      oldDate: trDate(oldDateStr),
+      oldTimeSlot,
+      date: trDate(date),
+      timeSlot,
+    }).catch((mailErr) => console.error("Erteleme e-postası gönderilemedi:", mailErr.message));
+
+    // In-app bildirimler (best-effort): doktora + hastaya
+    const when = `${trDate(date)} ${timeSlot}`;
+    (async () => {
+      const patient = await prisma.user.findUnique({ where: { id: appointment.patientId }, select: { name: true } });
+      const patientName = patient?.name || "Bir hasta";
+      await notify(appointment.doctor.userId, {
+        type: TYPES.RANDEVU_ERTELENDI,
+        title: "Randevu ertelendi",
+        body: `${patientName} — ${trDate(oldDateStr)} ${oldTimeSlot} → ${when}`,
+        link: "/doctor-dashboard",
+        appointmentId: id,
+      });
+      await notify(appointment.patientId, {
+        type: TYPES.RANDEVU_ERTELENDI,
+        title: "Randevunuz ertelendi",
+        body: `${appointment.doctor.user.name} — ${when}`,
+        link: "/appointments",
+        appointmentId: id,
+      });
+    })().catch((e) => console.error("Erteleme bildirimi hatası:", e.message));
+
+    return res.status(200).json({
+      success: true,
+      message: "Randevu ertelendi.",
+      data: { id: updated.id, date: updated.date, timeSlot: updated.timeSlot, status: updated.status },
+    });
+  } catch (error) {
+    console.error("Randevu erteleme hatası:", error);
+    return res.status(500).json({ success: false, message: "Sunucu hatası. Randevu ertelenemedi." });
+  }
+};
+
+// ────────────────────────────────────────────
 // PATCH /api/appointments/:id/complete — Randevuyu tamamlandı işaretle
 // Yalnızca randevunun doktoru. Randevu AKTIF olmalı ve saati başlamış olmalı
 // (gelecekteki bir randevu tamamlandı işaretlenemez).
@@ -438,6 +587,7 @@ module.exports = {
   getAvailableSlots,
   createAppointment,
   cancelAppointment,
+  rescheduleAppointment,
   completeAppointment,
   getMyAppointments,
   getDoctorAgenda,

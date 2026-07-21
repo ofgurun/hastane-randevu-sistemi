@@ -25,6 +25,12 @@ export async function cancelAppointment(id) {
   return res.data.data;
 }
 
+// Randevuyu ertele (aynı doktorla yeni tarih/saat) → { id, date, timeSlot, status }
+export async function rescheduleAppointment(id, date, timeSlot) {
+  const res = await api.patch(`/appointments/${id}/reschedule`, { date, timeSlot });
+  return res.data.data;
+}
+
 // Randevuyu tamamlandı olarak işaretler (yalnızca randevunun doktoru) → { id, status }
 export async function completeAppointment(id) {
   const res = await api.patch(`/appointments/${id}/complete`);

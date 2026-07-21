@@ -26,6 +26,7 @@ const POLL_MS = 60_000;
 const VISUALS = {
   RANDEVU_OLUSTURULDU: { Icon: CalendarPlus, cls: "bg-teal-50 text-teal-600" },
   RANDEVU_IPTAL: { Icon: CalendarX2, cls: "bg-red-50 text-red-600" },
+  RANDEVU_ERTELENDI: { Icon: CalendarClock, cls: "bg-sky-50 text-sky-600" },
   RANDEVU_TAMAMLANDI: { Icon: CircleCheck, cls: "bg-emerald-50 text-emerald-600" },
   RANDEVU_HATIRLATMA: { Icon: CalendarClock, cls: "bg-amber-50 text-amber-600" },
   RANDEVU_AKTARILDI: { Icon: CalendarClock, cls: "bg-sky-50 text-sky-600" },

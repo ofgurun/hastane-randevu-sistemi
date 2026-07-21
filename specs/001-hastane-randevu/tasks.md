@@ -375,6 +375,24 @@ planda UI kapsam dışıydı. Adım adım ekleniyor.
 
 ---
 
+## Phase 29: Admin İstatistik Paneli (Dashboard + Grafikler)
+
+- [X] T105 **Stats ucu**: `GET /admin/stats` (yalnızca ADMIN) — `statsController` birkaç toplu sorgu + in-memory hesap: toplamlar (total/upcoming/completed/cancelled/noShow/doctors/departments/patients), oranlar (iptal, no-show, tamamlanma), doluluk (önümüzdeki 30 gün: dolu AKTIF slot / kapasite), durum dağılımı, 30 günlük günlük trend, bölüm dağılımı (yoğunluğa göre), en yoğun ilk 8 doktor. *no-show* = zamanı geçmiş `AKTIF`.
+- [X] T106 **Frontend panel**: `StatsDashboard` — bağımlılıksız SVG/CSS grafikler: KPI kartları, alan/çizgi trend grafiği, durum donut'u, doluluk ölçeri, bölüm & doktor yatay çubuk listeleri. `statsService`. AdminDashboard'a **ilk sekme** "İstatistikler" (kendi verisini yükler, merkezî yüklemeden bağımsız).
+
+**Checkpoint**: ✅ İstatistik paneli **19/19** test geçti (401/403 yetki, baseline yapı + 30 nokta trend + oran aralığı, canlı veriye karşı delta: total/upcoming/completed/cancelled/noShow/doctors/departments/patients, trend +4, doluluk booked/capacity, bölüm/doktor dağılımı). Frontend build + lint temiz; grafikler için yeni bağımlılık yok.
+
+---
+
+## Phase 30: Randevu Erteleme (Reschedule)
+
+- [X] T107 **Erteleme ucu**: `PATCH /appointments/:id/reschedule` (sahibi hasta veya ADMIN) — aynı doktorla yeni tarih/saate taşır. `createAppointment` iş kuralları **kendisi hariç** (slot dolu, kapalı gün/saat, hastanın o gün başka AKTIF randevusu, geçmiş/aynı tarih). `reminderSent` sıfırlanır + eski `RANDEVU_HATIRLATMA` bildirimi silinir. Bildirimler: doktora + hastaya `RANDEVU_ERTELENDI`; e-posta `sendAppointmentReschedule`.
+- [X] T108 **Frontend erteleme**: `RescheduleModal` — tek ekranda doluluk noktalı ay takvimi + boş saat seçimi (mevcut `getDoctorAvailability` / `getAvailableSlots` yeniden kullanılır). Randevularım'da AKTIF & gelecek randevulara "Ertele" butonu; iyimser liste güncellemesi. NotificationBell'e `RANDEVU_ERTELENDI` ikonu.
+
+**Checkpoint**: ✅ Erteleme **17/17** test geçti (200 + DB güncel + reminderSent reset, doktor/hasta bildirimi, 400 aynı/geçmiş/geçersiz-slot/IPTAL, 409 slot-dolu & hasta-aynı-gün, 403 sahibi-değil, ADMIN 200, hatırlatma bildirimi reset, 404). Frontend build + lint temiz.
+
+---
+
 - [X] T098 Doktor paneli **Takviminiz**: `GET /api/doctors/me/availability?month=` (DOKTOR; availability hesabı `buildMonthAvailability` yardımcısına çıkarıldı) — ay görünümü yoğunluk barlı (sakin/orta/yoğun-kapalı; İPTAL hariç TAMAMLANDI dahil sayım ∪ kapalı slotlar), bugün vurgulu, güne tıklayınca sağ panelde o günün randevuları (saat + hasta + durum rozeti, İPTAL soluk); varsayılan seçim bugün. Test **6/6** geçti (400/401/403, randevulu gün 15, kapalı gün dayClosed+0, public uç regresyonsuz).
 - [X] T097 İzin **çakışma korumaları**: yeni talep, BEKLIYOR **veya ONAYLANDI** taleple çakışıyorsa ya da aralıktaki tüm günler zaten kapalıysa (admin doğrudan izne ayırdıysa) 409; admin onayı da aynı iki korumayla 409 döner (talep BEKLIYOR kalır, red mümkün). Kısmi kapalı aralıkta talep serbest (kalan günler için). Test **11/11** geçti.
 

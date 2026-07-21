@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, CalendarX2, Star, AlertTriangle } from "lucide-react";
+import { Loader2, CalendarX2, Star, AlertTriangle, CalendarClock } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import Modal from "../components/Modal";
 import ReviewModal from "../components/ReviewModal";
+import RescheduleModal from "../components/RescheduleModal";
 import StatusBadge from "../components/StatusBadge";
 import { getMyAppointments, cancelAppointment } from "../services/appointmentService";
 import { MONTHS_ABBR, fmtLong, apptStart } from "../utils/ui";
@@ -25,6 +26,7 @@ export default function Appointments() {
   const [cancelTarget, setCancelTarget] = useState(null); // onay bekleyen randevu
   const [cancelling, setCancelling] = useState(false);
   const [reviewing, setReviewing] = useState(null); // değerlendirilen randevu
+  const [rescheduling, setRescheduling] = useState(null); // ertelenen randevu
 
   const load = async () => {
     try {
@@ -155,6 +157,14 @@ export default function Appointments() {
                       )}
                       {canCancel && (
                         <button
+                          onClick={() => setRescheduling(a)}
+                          className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-teal-200 bg-teal-50 px-4 text-[13.5px] font-bold text-teal-700 transition hover:bg-teal-100"
+                        >
+                          <CalendarClock className="h-4 w-4" /> Ertele
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button
                           onClick={() => setCancelTarget(a)}
                           className="h-10 rounded-[10px] border border-red-200 bg-white px-4 text-[13.5px] font-bold text-red-600 transition hover:bg-red-50"
                         >
@@ -207,6 +217,19 @@ export default function Appointments() {
           appointment={reviewing}
           onClose={() => setReviewing(null)}
           onReviewed={(id) => setItems((prev) => prev.map((a) => a.id === id ? { ...a, review: { id: -1 } } : a))}
+        />
+      )}
+
+      {/* Erteleme modalı */}
+      {rescheduling && (
+        <RescheduleModal
+          appointment={rescheduling}
+          onClose={() => setRescheduling(null)}
+          onRescheduled={(u) =>
+            setItems((prev) =>
+              prev.map((a) => (a.id === u.id ? { ...a, date: u.date, timeSlot: u.timeSlot } : a))
+            )
+          }
         />
       )}
     </div>

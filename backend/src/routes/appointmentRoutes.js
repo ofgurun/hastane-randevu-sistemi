@@ -8,6 +8,7 @@ const {
   getAvailableSlots,
   createAppointment,
   cancelAppointment,
+  rescheduleAppointment,
   completeAppointment,
   getMyAppointments,
   getDoctorAgenda,
@@ -28,6 +29,9 @@ router.post("/", authenticate, createAppointment);
 
 // DELETE /api/appointments/:id — iptal (sahibi hasta veya ADMIN)
 router.delete("/:id", authenticate, cancelAppointment);
+
+// PATCH /api/appointments/:id/reschedule — ertele (sahibi hasta veya ADMIN)
+router.patch("/:id/reschedule", authenticate, rescheduleAppointment);
 
 // PATCH /api/appointments/:id/complete — tamamlandı işaretle (randevunun doktoru)
 router.patch("/:id/complete", authenticate, completeAppointment);

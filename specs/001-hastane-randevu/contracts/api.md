@@ -178,6 +178,19 @@ gönderilir (best-effort).
 - **400**: randevu zaten IPTAL · **401**: token yok · **403**: sahibi değil ve ADMIN değil
 - **404**: randevu bulunamadı
 
+### PATCH /api/appointments/:id/reschedule
+Randevuyu **erteler** — aynı doktorla yeni tarih/saate taşır (iptal + yeniden alma gerekmez).
+`createAppointment` ile aynı iş kuralları, ancak çakışma kontrolleri **kendisi hariç** yapılır.
+Ertelemede `reminderSent` sıfırlanır ve eski hatırlatma bildirimi silinir; hastaya bilgi
+e-postası + in-app bildirim (doktora + hastaya) gönderilir (best-effort).
+
+- **Auth**: Bearer (randevunun **sahibi hasta** veya **ADMIN**)
+- **Request**: `{ "date": "YYYY-MM-DD", "timeSlot": "HH:mm" }`
+- **200**: `{ success, message, data: { id, date, timeSlot, status } }`
+- **400**: eksik/geçersiz alan · geçmiş tarih · aynı tarih/saat · randevu IPTAL/TAMAMLANDI
+- **401**: token yok · **403**: sahibi değil ve ADMIN değil · **404**: randevu yok
+- **409**: slot dolu (başka AKTIF randevu/kapalı) · hastanın o gün başka AKTIF randevusu var
+
 ### PATCH /api/appointments/:id/complete
 Randevuyu **TAMAMLANDI** olarak işaretler. Yalnızca randevunun doktoru; randevu AKTIF
 olmalı ve saati başlamış olmalı (gelecekteki randevu tamamlanamaz).
@@ -246,6 +259,27 @@ Gün veya saat kapat/aç (**toggle**). `timeSlot` verilmezse tüm gün. **Yalnı
 > Etki: kapatılan gün/saatler `GET /appointments/available` sonuçlarından çıkarılır ve
 > `POST /appointments` bu slotları **409** ile reddeder.
 
+### GET /api/admin/stats
+Yönetim istatistik paneli verileri (toplamlar, oranlar, doluluk, günlük trend, bölüm/doktor
+dağılımı). **Yalnızca ADMIN.** Birkaç toplu sorgu + in-memory hesap.
+
+- **Auth**: Bearer (ADMIN)
+- **200**: `{ success, data: {
+    totals: { total, upcoming, completed, cancelled, noShow, doctors, departments, patients },
+    rates: { cancellation, noShow, completion },
+    occupancy: { rate, booked, capacity, windowDays },
+    statusBreakdown: [ { key, label, count } ],
+    trend: [ { date: "YYYY-MM-DD", count } ],
+    byDepartment: [ { id, name, total, completed, cancelled } ],
+    byDoctor: [ { id, name, title, department, total } ]
+  } }`
+- **401/403**: yetki
+
+> **Tanımlar**: *no-show* = zamanı geçmiş ama `TAMAMLANDI` işaretlenmemiş `AKTIF` randevu.
+> *Oranlar* 0..1: iptal = IPTAL/toplam; no-show & tamamlanma = ilgili / (tamamlandı + no-show).
+> *Doluluk* önümüzdeki 30 gün: dolu AKTIF slot / (doktor × 16 slot × 30 − kapalı slotlar).
+> *Trend* son 30 gün, iptal-dışı, randevu gününe göre. *byDoctor* en yoğun ilk 8.
+
 ## Değerlendirmeler (Review)
 
 ### POST /api/reviews
@@ -291,8 +325,9 @@ Kullanıcının tüm okunmamış bildirimlerini okundu işaretle.
 - **Auth**: Bearer (her rol)
 - **200**: `{ success, message, data: { updated } }`
 
-> **Bildirim tipleri (`type`)**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_TAMAMLANDI`,
-> `RANDEVU_HATIRLATMA`, `RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`, `YENI_DEGERLENDIRME`.
+> **Bildirim tipleri (`type`)**: `RANDEVU_OLUSTURULDU`, `RANDEVU_IPTAL`, `RANDEVU_ERTELENDI`,
+> `RANDEVU_TAMAMLANDI`, `RANDEVU_HATIRLATMA`, `RANDEVU_AKTARILDI`, `IZIN_TALEBI`, `IZIN_KARARI`,
+> `YENI_DEGERLENDIRME`.
 > `link` alanı ilgili sayfaya yönlendirir (ör. `/appointments`, `/doctor-dashboard`, `/admin`).
 
 ## Ortak Hata Kodları
