@@ -9,7 +9,11 @@ const {
   getAllLeaveRequests,
   decideLeaveRequest,
 } = require("../controllers/leaveRequestController");
+const { getAdminStats } = require("../controllers/statsController");
 const { authenticate, authorize } = require("../middlewares/authMiddleware");
+
+// GET /api/admin/stats — istatistik paneli verileri
+router.get("/stats", authenticate, authorize("ADMIN"), getAdminStats);
 
 // GET /api/admin/leave-requests — izin talepleri (bekleyenler önce)
 router.get("/leave-requests", authenticate, authorize("ADMIN"), getAllLeaveRequests);
