@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
+import StatsDashboard from "../components/StatsDashboard";
 import DepartmentManagement from "../components/DepartmentManagement";
 import DoctorManagement from "../components/DoctorManagement";
 import AdminCalendar from "../components/AdminCalendar";
@@ -10,6 +11,7 @@ import { getDepartments } from "../services/departmentService";
 import { getAllDoctors, getLeaveRequests } from "../services/doctorService";
 
 const TABS = [
+  { key: "stats", label: "İstatistikler" },
   { key: "depts", label: "Bölümler" },
   { key: "doctors", label: "Doktorlar" },
   { key: "calendar", label: "Takvim" },
@@ -19,7 +21,7 @@ const TABS = [
 // Admin Paneli — sekmeli görünüm: Bölümler · Doktorlar · Takvim · İzin Talepleri.
 // Veriler panelde bir kez yüklenir ve sekmelere prop olarak dağıtılır.
 export default function AdminDashboard() {
-  const [tab, setTab] = useState("depts");
+  const [tab, setTab] = useState("stats");
   const [departments, setDepartments] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -81,7 +83,9 @@ export default function AdminDashboard() {
           })}
         </div>
 
-        {loading ? (
+        {tab === "stats" ? (
+          <StatsDashboard />
+        ) : loading ? (
           <div className="flex items-center justify-center gap-2 py-24 text-stone-500">
             <Loader2 className="h-6 w-6 animate-spin" /> Panel yükleniyor…
           </div>
